@@ -35,12 +35,15 @@ Commands:
   up                 Create and start containers
   update             Update gdev environment
   sync               Syncronize files with data container
+  create             Create new project
 
 HEREDOC
 
   PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start stop}
   PROXY_MODIFIED=%w{up run}
-  OTHER_COMMANDS=%w{reload cleanup machine update service status shell exec sync}
+  OTHER_COMMANDS=%w{reload cleanup machine update service status shell exec sync create}
+
+  CREATE_HELP='Usage: $ gdev create type=wordpress components=dustpress stage=stage.mydomain.com production=cloud.mydomain.com theme=ssh://git@domain:/theme.git name="My app" description="Short description of my app" sitename=myapp envvars=envvars.json stage=stage.mydomain.com production=cloud.mydomain.com git=ssh://git@mydomain:/my-app.git'
 
   def initialize(args)
     if PROXY_UNMODIFIED_TO_COMPOSE.include?(args[0])
@@ -294,6 +297,86 @@ HEREDOC
     system "UNISONLOCALHOSTNAME=dev-machine unison . socket://localhost:#{port}/ #{unison_args}"
 
     puts "INFO: Sync is ready!"
+  end
+
+  # Create new project command (validate arguments and start creating app or use wizard)
+  def create(args)
+    # validate arguments
+    if args.length > 0
+      required_args = [
+        'sitename', 'envvars', 'type'
+      ]
+      # loop given arguments
+      args.each { |argument|
+        arg = argument.split('=')
+        if arg.length == 2
+          # every argument has value, check for required args
+
+          # split argument to key value pair
+          key = arg[0]
+          val = arg[1]
+
+          if required_args.include?(key)
+            required_args.delete(key)
+          end
+
+        else
+          # argument value missing, exit script and show help
+          puts 'Argument '+arg[0]+' needs value'
+          puts CREATE_HELP
+          exit
+        end
+      }
+
+      if required_args.length == 0
+        # all required arguments given, proceed
+      else
+        # required arguments missing, exit script and show help
+        puts "Arguments required:"
+        puts required_args
+        puts CREATE_HELP
+        exit
+      end
+
+      # start creating project
+      create_app(args)
+
+    else
+      # no args given, use wizard
+      create_wizard()
+
+    end
+
+  end
+
+  # Create new site
+  def create_app(args)
+    puts "Creating project..."
+
+    sitename = args[args.find_index { |e| e.match( /sitename/ ) }].split('=')[1]
+    envvars = args[args.find_index { |e| e.match( /envvars/ ) }].split('=')[1]
+    type = args[args.find_index { |e| e.match( /type/ ) }].split('=')[1]
+
+    puts "site: "+sitename
+    puts "vars: "+envvars
+    puts "type: "+type
+    puts "---"
+
+    puts "all args:"
+    puts args
+
+    # TODO: really create app here
+
+    puts "END."
+  end
+
+  def create_wizard()
+    # TODO: ask args and start creating app
+    puts "wizard"
+
+    # temporarily show usage help
+    puts CREATE_HELP
+    exit
   end
 
   # H.T. https://gist.github.com/lpar/1032297
