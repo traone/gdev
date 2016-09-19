@@ -328,6 +328,9 @@ HEREDOC
           else
             # keep track of used arguments
             used_args.push(key)
+            
+            # TODO: validate sitename (only lowercase chars, dashes or numbers)
+
             # set key and value to hash
             args_hash[key]=val
           end
@@ -367,13 +370,62 @@ HEREDOC
 
   # Create new site
   def create_app(args)
-    puts "Creating project..."
+    puts "Creating project "+args['sitename']+"..."
 
     #puts args.inspect
 
-    puts args['sitename']
+    case args['type']
+    when "wordpress"
+      # setup wordpress project
+      # check if project directory already exists
+      unless Dir.exists?(args['sitename'])
+        # clone wp-project from github
+        puts "Cloning wp-project..."
+        puts %x(git clone git@github.com:devgeniem/wp-project.git #{args['sitename']})
+        if args['theme']
+          puts "Cloning theme..."
+          puts %x(git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{args['sitename']})
+        else
+          # TODO: get default theme url from ~/.gdev/gdevconf.yml
+          # do not get theme if default is not set
+          puts "TODO"
+          puts "Cloning default theme if set ~/.gdev/gdevconf.yml"
+        end
+        # check which components to install if any
+        if args['components']
+          components_array=args['components'].split(',')
+          components_array.each { |component|
+            case component
+            when 'dustpress'
+              # require dustpress components
+              puts %x(cd #{args['sitename']}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*)
+            else
+              puts "Component "+component+" not supported."
+            end
+          }
+        end
+        # TODO: replace all THEMENAME and PROJECTNAME references from all files from this project to your project name
+        # TODO: Change project test address in docker-compose.yml for example wordpress.test -> client-name.test
+        # TODO: Add all people working in the project into authors section of composer.json and rename the project devgeniem/wp-project->devgeniem/client in composer.json
+        # TODO: composer install
+        # TODO: gdev up
+      else
+        puts "Directory "+args['sitename']+" exists, please use another sitename."
+        puts CREATE_HELP
 
-    # TODO: really create app here
+        exit
+      end
+
+
+    when "nodejs"
+      # setup nodejs project
+      puts "nodejs project not implemented yet."
+    when "silverbullet"
+      # setup silverbullet project
+      puts "silverbullet project not implemented yet."
+    else
+      puts "Type "+args['type']+" not supported."
+    end
 
     puts "END."
   end
