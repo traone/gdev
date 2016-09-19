@@ -305,6 +305,7 @@ HEREDOC
 
     # got arguments
     unless args.empty?
+      # TODO: parse_args method
       required_args = ['sitename', 'envvars', 'type']
       # loop given arguments
       used_args = []
@@ -380,10 +381,10 @@ HEREDOC
       # check if project directory already exists
       unless Dir.exists?(args['sitename'])
         # clone wp-project from github
-        puts "Cloning wp-project..."
+        puts "Cloning wp-project from git@github.com:devgeniem/wp-project.git to #{args['sitename']}..."
         puts %x(git clone git@github.com:devgeniem/wp-project.git #{args['sitename']})
         if args['theme']
-          puts "Cloning theme..."
+          puts "Cloning theme from #{args['theme']}..."
           puts %x(git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{args['sitename']})
         else
           # TODO: get default theme url from ~/.gdev/gdevconf.yml
@@ -398,17 +399,56 @@ HEREDOC
             case component
             when 'dustpress'
               # require dustpress components
+              puts "Installing dustpress, dustpress-debugger and dustpress-js with composer..."
               puts %x(cd #{args['sitename']}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*)
             else
               puts "Component "+component+" not supported."
             end
           }
         end
-        # TODO: replace all THEMENAME and PROJECTNAME references from all files from this project to your project name
-        # TODO: Change project test address in docker-compose.yml for example wordpress.test -> client-name.test
+        # replace all THEMENAME and PROJECTNAME references from all files from this project to your project name
+        puts "Replacing THEMENAME and PROJECTNAME strings from all project files with #{args['sitename']}..."
+        themename_file_names = [
+          "#{args['sitename']}/.drone.yml", 
+          "#{args['sitename']}/config/application.php",
+          "#{args['sitename']}/docker-compose.yml"
+        ]
+        themename_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/THEMENAME/, "#{args['sitename']}")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+        projectname_file_names = [
+          "#{args['sitename']}/.drone.yml"
+        ]
+        projectname_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+        # change project test address in docker-compose.yml for example wordpress.test -> client-name.test
+        docker_compose = File.read("#{args['sitename']}/docker-compose.yml")
+        docker_compose_replace = docker_compose.gsub(/wordpress.test/, "#{args['sitename']}.test")
+        File.open("#{args['sitename']}/docker-compose.yml", "w") {|file| file.puts docker_compose_replace }
+
         # TODO: Add all people working in the project into authors section of composer.json and rename the project devgeniem/wp-project->devgeniem/client in composer.json
-        # TODO: composer install
-        # TODO: gdev up
+        
+        # composer install
+        puts "Running composer install..."
+        puts %x(cd #{args['sitename']}; composer install)
+        # gdev up
+        puts "Running gdev up..."
+        puts %x(cd #{args['sitename']}; gdev up)
+
+        # seed (install wp)
+        puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
+        sleep(10)
+        puts "Running scripts/seed.sh..."
+        puts %x(cd #{args['sitename']}; gdev run web ./scripts/seed.sh)
+
+        puts "Point your browser to https://#{args['sitename']}.test"
+
+        # TODO: help for setting up stage and production
       else
         puts "Directory "+args['sitename']+" exists, please use another sitename."
         puts CREATE_HELP
