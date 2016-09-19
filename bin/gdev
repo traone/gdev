@@ -17,7 +17,8 @@ Options:
 
 Commands:
   build              Build or rebuild services
-  cleanup           Deletes docker containers, images and volumes
+  cleanup            Deletes docker containers, images and volumes
+  create             Create new project
   exec               Run command inside web container
   help               Get help on a command
   kill               Kill containers
@@ -32,10 +33,9 @@ Commands:
   service            Manage gdev services (nginx and dnsmasq, mail)
   start              Start services
   stop               Stop services
+  sync               Syncronize files with data container
   up                 Create and start containers
   update             Update gdev environment
-  sync               Syncronize files with data container
-  create             Create new project
 
 HEREDOC
 
@@ -43,7 +43,7 @@ HEREDOC
   PROXY_MODIFIED=%w{up run}
   OTHER_COMMANDS=%w{reload cleanup machine update service status shell exec sync create}
 
-  CREATE_HELP='Usage: $ gdev create type=wordpress components=dustpress stage=stage.mydomain.com production=cloud.mydomain.com theme=ssh://git@domain:/theme.git name="My app" description="Short description of my app" sitename=myapp envvars=envvars.json stage=stage.mydomain.com production=cloud.mydomain.com git=ssh://git@mydomain:/my-app.git'
+  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --name="My app" --description="Short description of my app" --sitename=myapp --envvars=envvars.json --stage=stage.mydomain.com --production=cloud.mydomain.com --git=ssh://git@mydomain:/my-app.git'
 
   def initialize(args)
     if PROXY_UNMODIFIED_TO_COMPOSE.include?(args[0])
@@ -302,11 +302,13 @@ HEREDOC
   # Create new project command (validate arguments and start creating app or use wizard)
   def create(args)
     # validate arguments
-    if args.length > 0
-      required_args = [
-        'sitename', 'envvars', 'type'
-      ]
+
+    # got arguments
+    unless args.empty?
+      required_args = ['sitename', 'envvars', 'type']
       # loop given arguments
+      used_args = []
+      args_hash = Hash.new
       args.each { |argument|
         arg = argument.split('=')
         if arg.length == 2
@@ -315,6 +317,20 @@ HEREDOC
           # split argument to key value pair
           key = arg[0]
           val = arg[1]
+
+          # remove all dashes from beginning of key
+          key.sub! /\A-+/, ''
+          # check for duplicate arguments
+          if used_args.include?(key)
+            puts "Duplicate arguments"
+            puts CREATE_HELP
+            exit
+          else
+            # keep track of used arguments
+            used_args.push(key)
+            # set key and value to hash
+            args_hash[key]=val
+          end
 
           if required_args.include?(key)
             required_args.delete(key)
@@ -339,10 +355,10 @@ HEREDOC
       end
 
       # start creating project
-      create_app(args)
+      create_app(args_hash)
 
     else
-      # no args given, use wizard
+      # no arguments given, start wizard
       create_wizard()
 
     end
@@ -353,17 +369,9 @@ HEREDOC
   def create_app(args)
     puts "Creating project..."
 
-    sitename = args[args.find_index { |e| e.match( /sitename/ ) }].split('=')[1]
-    envvars = args[args.find_index { |e| e.match( /envvars/ ) }].split('=')[1]
-    type = args[args.find_index { |e| e.match( /type/ ) }].split('=')[1]
+    #puts args.inspect
 
-    puts "site: "+sitename
-    puts "vars: "+envvars
-    puts "type: "+type
-    puts "---"
-
-    puts "all args:"
-    puts args
+    puts args['sitename']
 
     # TODO: really create app here
 
