@@ -240,7 +240,7 @@ HEREDOC
     data_docker_id=`docker-compose ps -q #{container_name}`
     if $?.success? and not data_docker_id.empty?
         # Get the data container port
-        data_docker_ports = %x(docker inspect --format='{{json .NetworkSettings.Ports}}' #{data_docker_id})
+        data_docker_ports = `docker inspect --format='{{json .NetworkSettings.Ports}}' #{data_docker_id}`
         if $?.success? and data_docker_ports
             begin
                 data_docker_ports_obj = JSON.parse(data_docker_ports)
@@ -382,10 +382,10 @@ HEREDOC
       unless Dir.exists?(args['sitename'])
         # clone wp-project from github
         puts "Cloning wp-project from git@github.com:devgeniem/wp-project.git to #{args['sitename']}..."
-        puts %x(git clone git@github.com:devgeniem/wp-project.git #{args['sitename']})
+        puts `git clone git@github.com:devgeniem/wp-project.git #{args['sitename']}`
         if args['theme']
           puts "Cloning theme from #{args['theme']}..."
-          puts %x(git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{args['sitename']})
+          puts `git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{args['sitename']}`
         else
           # TODO: get default theme url from ~/.gdev/gdevconf.yml
           # do not get theme if default is not set
@@ -400,7 +400,7 @@ HEREDOC
             when 'dustpress'
               # require dustpress components
               puts "Installing dustpress, dustpress-debugger and dustpress-js with composer..."
-              puts %x(cd #{args['sitename']}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*)
+              puts `cd #{args['sitename']}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*`
             else
               puts "Component "+component+" not supported."
             end
@@ -435,18 +435,26 @@ HEREDOC
         
         # composer install
         puts "Running composer install..."
-        puts %x(cd #{args['sitename']}; composer install)
+        puts `cd #{args['sitename']}; composer install`
         # gdev up
         puts "Running gdev up..."
-        puts %x(cd #{args['sitename']}; gdev up)
+        puts `cd #{args['sitename']}; gdev up`
 
         # seed (install wp)
         puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
         sleep(10)
         puts "Running scripts/seed.sh..."
-        puts %x(cd #{args['sitename']}; gdev run web ./scripts/seed.sh)
+        puts `cd #{args['sitename']}; gdev run web ./scripts/seed.sh`
 
-        puts "Point your browser to https://#{args['sitename']}.test"
+        # temporary fix for redis-cache plugin, remove this when plugin works
+        puts "Copying object-cache.php in place (temporary fix for redis-cache plugin)..."
+        `cp #{args['sitename']}/web/app/object-cache.php #{args['sitename']}/web/app/plugins/redis-cache/includes`
+
+        # gdev reload
+        puts "Reloading gdev..."
+        puts `cd #{args['sitename']}; gdev reload`
+
+        puts "Point your browser to https://#{args['sitename']}.test/wp-admin and log in"
 
         # TODO: help for setting up stage and production
       else
