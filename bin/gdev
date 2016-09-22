@@ -552,8 +552,17 @@ HEREDOC
       puts "Components (dustpress):"
       project['components']=gets.chomp
       puts ""
-      puts "Theme repository address, ssh or https (ssh://git@domain/theme.git):"
+      if (defaults['theme'])
+        puts "Theme repository address, ssh or https ("+defaults['theme']+default_marker+"):"
+      else
+        puts "Theme repository address, ssh or https (ssh://git@domain/theme.git):"
+      end
       project['theme']=gets.chomp
+      if project['theme'] == '' and defaults['theme']
+        project['theme']=defaults['theme']
+        puts defaults['theme']
+      else
+      end
       puts ""
     end
     # set stage cluster domain
