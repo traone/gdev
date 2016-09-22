@@ -371,6 +371,13 @@ HEREDOC
 
   # Create new site
   def create_app(args)
+
+    unless validate_string(args['sitename'])
+      puts "Sitename not valid."
+      puts CREATE_HELP
+      exit
+    end
+
     puts "Creating project "+args['sitename']+"..."
 
     #puts args.inspect
@@ -400,7 +407,7 @@ HEREDOC
             when 'dustpress'
               # require dustpress components
               puts "Installing dustpress, dustpress-debugger and dustpress-js with composer..."
-              puts `cd #{args['sitename']}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*`
+              puts `cd #{args["sitename"]}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*`
             else
               puts "Component "+component+" not supported."
             end
@@ -435,28 +442,49 @@ HEREDOC
         
         # composer install
         puts "Running composer install..."
-        puts `cd #{args['sitename']}; composer install`
+        puts `cd #{args["sitename"]}; composer install`
         # gdev up
         puts "Running gdev up..."
-        puts `cd #{args['sitename']}; gdev up`
+        puts `cd #{args["sitename"]}; gdev up`
 
         # seed (install wp)
         puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
         sleep(10)
         puts "Running scripts/seed.sh..."
-        puts `cd #{args['sitename']}; gdev run web ./scripts/seed.sh`
+        puts `cd #{args["sitename"]}; gdev run web ./scripts/seed.sh`
 
         # temporary fix for redis-cache plugin, remove this when plugin works
         puts "Copying object-cache.php in place (temporary fix for redis-cache plugin)..."
-        `cp #{args['sitename']}/web/app/object-cache.php #{args['sitename']}/web/app/plugins/redis-cache/includes`
+        `cp #{args["sitename"]}/web/app/object-cache.php #{args["sitename"]}/web/app/plugins/redis-cache/includes`
 
         # gdev reload
         puts "Reloading gdev..."
-        puts `cd #{args['sitename']}; gdev reload`
+        puts `cd #{args["sitename"]}; gdev reload`
 
         puts "Point your browser to https://#{args['sitename']}.test/wp-admin and log in"
 
         # TODO: help for setting up stage and production
+        puts ""
+        puts "To create stage environment run:"
+        puts "$ flynn -c stage create #{args['sitename']} --remote=\"\""
+        puts ""
+        puts "Add mysql and redis resources for project:"
+        puts "$ flynn -c stage -a upi resource add mysql"
+        puts "$ flynn -c stage -a upi resource add redis"
+        puts ""
+        puts "Set environment variables:"
+        puts "$ flynn -c stage -a #{args['sitename']} env set WP_ENV=staging"
+        puts "$ flynn -c stage -a #{args['sitename']} env set WP_HOME=https://#{args['sitename']}.#{args['stage']}"
+        puts "$ flynn -c stage -a #{args['sitename']} env set WP_SITEURL=https://#{args['sitename']}.#{args['stage']}"
+        puts ""
+        puts "To deploy your project to stage cluster, go to project directory root and run:"
+        puts "$ docker build --pull -t devgeniem/#{args['sitename']}:stable ."
+        puts "$ flynn -c stage -a #{args['sitename']} docker push devgeniem/#{args['sitename']}:stable"
+        puts ""
+        puts "Scale cluster as needed:"
+        puts "$ flynn -c stage -a #{args['sitename']} scale app=1"
+        puts ""
+        puts "More help with Flynn, visit: <url>"
       else
         puts "Directory "+args['sitename']+" exists, please use another sitename."
         puts CREATE_HELP
@@ -475,15 +503,109 @@ HEREDOC
       puts "Type "+args['type']+" not supported."
     end
 
-    puts "END."
+  end
+
+  # validate string (alphanumeric chars and -)
+  def validate_string(string)
+    !string.match(/\A[-a-zA-Z0-9]*\z/).nil?
+  end
+
+  def get_defaults(type)
+    defaults = Hash.new
+    if File.exist?(ENV['HOME']+'/.gdev/gdevconf.yml')
+      config = YAML.load(File.read(ENV['HOME']+"/.gdev/gdevconf.yml"))
+      defaults = config['create']['defaults'][type]
+    end
+    return defaults
   end
 
   def create_wizard()
-    # TODO: ask args and start creating app
-    puts "wizard"
+    # load default values
+    defaults = get_defaults('wordpress')
+    default_marker = "[default]"
+    project = Hash.new
+    puts "----------------------= Create new project =---------------------"
 
-    # temporarily show usage help
-    puts CREATE_HELP
+    puts "Name for the project:"
+    project['name']=gets.chomp
+    puts ""
+    puts "Project description:"
+    project['description']=gets.chomp
+    puts ""
+    puts "Sitename (lowercase characters, dashes and numbers only):"
+    project['sitename']=gets.chomp
+    unless validate_string(project['sitename'])
+      puts "Sitename (lowercase characters, dashes and numbers only):"
+      project['sitename']=gets.chomp
+    end
+    puts ""
+    puts "Project type (wordpress"+default_marker+", nodejs, silverbullet):"
+    project['type']=gets.chomp
+    # wordpress specific settings
+    if ['','wordpress'].include?(project['type'])
+      # show selected default value
+      if project['type'] == ""
+        project['type']="wordpress"
+        puts "wordpress"
+      end
+      puts ""
+      puts "Components (dustpress):"
+      project['components']=gets.chomp
+      puts ""
+      puts "Theme repository address, ssh or https (ssh://git@domain/theme.git):"
+      project['theme']=gets.chomp
+      puts ""
+    end
+    # set stage cluster domain
+    if defaults['stage']
+      puts "Flynn stage cloud address ("+defaults['stage']+default_marker+"):"
+    else
+      puts "Flynn stage cloud address (stage.mydomain.com):"
+    end
+    project['stage']=gets.chomp
+    if project['stage'] == '' and defaults['stage']
+      project['stage']=defaults['stage']
+      puts defaults['stage']
+    else
+      puts '-- not set --'
+    end
+    puts ""
+    # set production cluster domain
+    if defaults['production']
+      puts "Flynn production cloud address ("+defaults['production']+default_marker+"):"
+    else
+      puts "Flynn production cloud address (cloud.mydomain.com):"
+    end
+    project['production']=gets.chomp
+    if project['production'] == '' and defaults['production']
+      project['production']=defaults['production']
+      puts defaults['production']
+    else
+      puts '-- not set --'
+    end
+    puts ""
+
+    puts "Environment variables file (envvars.yml)"
+    project['envvars']=gets.chomp
+    puts ""
+    puts "Project git repository, ssh or https (ssh://git@domain/my-app.git):"
+    project['git']=gets.chomp
+    
+    puts ""
+    puts "------------------------= Confirm input =------------------------"
+    project.each { |key,val|
+      puts key+": "+val
+    }
+    puts "-----= Enter Y to create project, something else to cancel =-----"
+    puts ""
+    confirm = gets.chomp
+    puts ""
+    if ['Y','y'].include?(confirm)
+      create_app(project)
+    else
+      puts "Cancelled."
+    end
+
     exit
   end
 
