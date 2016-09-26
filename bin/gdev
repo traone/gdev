@@ -83,27 +83,28 @@ HEREDOC
     if args.include?('--images')
 
         puts "Removing all unused docker images..."
-        images = `docker images -q`
+        images = `docker images -q`.gsub("\n",' ')
 
-        system "docker rmi #{images.tr("\n"," ")}" if $?.success? and not images.empty?
+        system "docker rmi #{images}" if $?.success? and not images.empty?
 
     elsif args.empty?
 
         puts "Removing exited docker containers..."
 
-        containers = `docker ps -a -q -f status=exited`
+        containers = `docker ps -a -q -f status=exited`.gsub("\n",' ')
 
         system "docker rm -v #{containers}" if $?.success? and not containers.empty?
 
         puts "Removing dangling docker images..."
 
-        images = `docker images -f 'dangling=true' -q`
+        images = `docker images -f 'dangling=true' -q`.gsub("\n",' ')
 
         system "docker rmi #{images}" if $?.success? and not images.empty?
 
         puts "Removing dangling docker volumes..."
 
-        volumes = `docker volume ls -qf dangling=true`
+        volumes = `docker volume ls -qf dangling=true`.gsub("\n",' ')
+
         system "docker volume rm #{volumes}" if $?.success? and not volumes.empty?
 
     end

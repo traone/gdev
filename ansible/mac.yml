@@ -54,7 +54,6 @@
     - name: Start docker for mac
       command: "open -a docker"
 
-
     - name: "Check that we have /var/run/docker.sock socket"
       wait_for:
         path: /var/run/docker.sock
@@ -69,8 +68,14 @@
       fail: msg="Check that docker for mac is enabled! /var/run/docker.sock is not mounted :(..."
       when: not docker_socket.stat.exists
 
-    - name: Start gdev services
-      command: "{{ gdev_env_dir }}/bin/gdev service up"
+    - name: Wait for signaler to create CA file
+      wait_for:
+        path: "{{ gdev_user_files }}/ca/ca.crt"
+        state: present
+        timeout: 30
+
+    - name: Start or reload gdev services
+      command: "{{ gdev_env_dir }}/bin/gdev service up --build --force-recreate"
 
     - name: Wait for signaler to create CA file
       wait_for:

@@ -1,0 +1,2 @@
+# Ignore ansible retry files
+ansible/*.retry
