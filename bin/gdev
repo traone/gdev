@@ -394,6 +394,9 @@ HEREDOC
         if args['theme']
           puts "Cloning theme from #{args['theme']}..."
           puts `git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{args['sitename']}`
+          puts "Removing .git directory from theme..."
+          `rm -rf #{args['sitename']}/web/app/themes/#{args['sitename']}/.git`
+          puts ""
         else
           # TODO: get default theme url from ~/.gdev/gdevconf.yml
           # do not get theme if default is not set
@@ -444,6 +447,8 @@ HEREDOC
         # composer install
         puts "Running composer install..."
         puts `cd #{args["sitename"]}; composer install`
+        puts "Running composer update..."
+        puts `cd #{args["sitename"]}; composer update`
         # gdev up
         puts "Running gdev up..."
         puts `cd #{args["sitename"]}; gdev up`
@@ -453,14 +458,32 @@ HEREDOC
         sleep(10)
         puts "Running scripts/seed.sh..."
         puts `cd #{args["sitename"]}; gdev run web ./scripts/seed.sh`
+        puts ""
 
         # temporary fix for redis-cache plugin, remove this when plugin works
         puts "Copying object-cache.php in place (temporary fix for redis-cache plugin)..."
         `cp #{args["sitename"]}/web/app/object-cache.php #{args["sitename"]}/web/app/plugins/redis-cache/includes`
+        puts ""
+
+        # install theme npm modules
+        puts "Installing theme node modules..."
+        puts `cd #{args["sitename"]}/web/app/themes/#{args["sitename"]}; npm install`
+        puts ""
 
         # gdev reload
         puts "Reloading gdev..."
         puts `cd #{args["sitename"]}; gdev reload`
+        puts ""
+
+        # set git repository
+        if args['git'] == ""
+          puts "NO GIT REPOSITORY GIVEN!"
+        puts `cd #{args["sitename"]}; git remote rm origin`
+        else
+          puts "Changing git remote to #{args['git']}..."
+          puts `cd #{args["sitename"]}; git remote set-url origin #{args["git"]}`
+        end
+        puts ""
 
         puts "Point your browser to https://#{args['sitename']}.test/wp-admin and log in"
 
