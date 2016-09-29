@@ -466,9 +466,11 @@ HEREDOC
         puts ""
 
         # install theme npm modules
-        puts "Installing theme node modules..."
-        puts `cd #{args["sitename"]}/web/app/themes/#{args["sitename"]}; npm install`
-        puts ""
+        if args['npm_install']
+          puts "Installing theme node modules..."
+          puts `cd #{args["sitename"]}/web/app/themes/#{args["sitename"]}; npm install`
+          puts ""
+        end
 
         # gdev reload
         puts "Reloading gdev..."
@@ -589,6 +591,16 @@ HEREDOC
       end
       puts ""
     end
+    # run npm install in theme directory?
+    # TODO: default value
+    puts "Run npm install in theme directory? (Y/N)"
+    npm_install=gets.chomp
+    if ['Y','y'].include?(npm_install)
+      project['npm_install']=true
+    else
+      project['npm_install']=false
+    end
+    puts ""
     # set stage cluster domain
     if defaults['stage']
       puts "Flynn stage cloud address ("+defaults['stage']+default_marker+"):"
@@ -627,7 +639,7 @@ HEREDOC
     puts ""
     puts "------------------------= Confirm input =------------------------"
     project.each { |key,val|
-      puts key+": "+val
+      puts key+": "+val.to_s
     }
     puts "-----= Enter Y to create project, something else to cancel =-----"
     puts ""
