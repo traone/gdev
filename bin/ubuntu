@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+#Install Ubuntu deps
+sudo apt install build-essential curl git python-setuptools ruby
+
+# We need at least ansible 2.0 for blockinfile directive
+ANSIBLE_NEEDED="2.0"
+
+# This is fork from original
+REPO='devgeniem/gdev'
+
+# Returns 1 if upgrade is needed
+# $1 - SYSTEM VERSION
+# $2 - NEEDED VERSION
+update_needed () {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 0
+        fi
+    done
+    return 0
+}
+
+# Returns 1 if not enough disk space
+# $1 disk space needed in gb
+free_disk_space() {
+  local needed_mb=$1
+  local available_mb=$(df -m / | tail -n 1 | xargs echo | cut -d' ' -f4)
+
+  echo "Available disk space: "$available_mb"mb"
+
+  if [ "$needed_mb" -ge "$available_mb" ]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+## Install or Update Homebrew ##
+echo 'Installing or Updating Linuxbrew...'
+which brew
+if [[ $? != 0 ]] ; then
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
+    PATH="$HOME/.linuxbrew/bin:$PATH"
+    echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+    echo 'export MANPATH="$HOME/.linuxbrew/share/man:$MANPATH"' >>~/.bash_profile
+    echo 'export INFOPATH="$HOME/.linuxbrew/share/info:$INFOPATH"' >>~/.bash_profile
+else
+    brew update
+fi
+echo -e "\n\n"
+
+## Install or Update Ansible ##
+echo 'Installing or Updating Ansible...'
+which ansible-playbook
+if [[ $? != 0 ]] ; then
+  echo "ansible installation..."
+    brew install ansible
+else # Ansible needs to be at least 1.9
+  ANSIBLE_VERSION=$(ansible --version | grep ansible | cut -d " " -f 2)
+  if update_needed $ANSIBLE_VERSION $ANSIBLE_NEEDED; then
+    echo "Ansible is too old: $ANSIBLE_VERSION. We need >$ANSIBLE_NEEDED"
+    echo "Updating ansible through homebrew..."
+    brew upgrade ansible
+    brew link --overwrite ansible
+  else
+    echo "Ansible version is $ANSIBLE_VERSION. Update not needed..."
+  fi
+fi
+echo -e "\n\n"
+
+## Check available disk space in gigabytes
+if free_disk_space 5120; then
+  echo "CHECK: You have at least 5gb available space."
+else
+  echo "ERROR: You need to have 5gb available space."
+  exit
+fi
+
+# Check out a copy of this repo (first time only) ##
+GDEV_DIR=/usr/local/gdev-env/
+if [ -d "$GDEV_DIR" ]; then
+  echo "Updating pre-existing gdev repo..."
+  cd $GDEV_DIR
+  # Remove any local changes and update to origin
+  git reset HEAD --hard && git pull origin HEAD
+else
+  echo "Checking out gdev repo..."
+  sudo git clone https://github.com/$REPO.git $GDEV_DIR 2>/dev/null
+fi
+
+echo 'Handing Playbook to Ansible (will require your sudo password)...'
+echo -e "\n"
+
+# Continue with gdev setup
+ansible-playbook $GDEV_DIR/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass -vvvv
+
+# Help user to debug usual problems
+echo "If you had any errors you can try reboot your machine and then running this again."
