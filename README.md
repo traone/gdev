@@ -10,6 +10,9 @@ Install gdev dependencies and start development environment by running:
 
     $ curl -fsSL https://raw.githubusercontent.com/devgeniem/gdev/master/bin/bootstrap | bash
 
+If you're installing on a Ubuntu machine, run:
+    $ curl -fsSL https://raw.githubusercontent.com/devgeniem/gdev/master/bin/ubuntu | bash
+
 ## Start project containers
 
 Start a new shell and cd to a project that uses [docker-compose.yml](https://docs.docker.com/compose/)
