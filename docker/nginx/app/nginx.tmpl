@@ -52,18 +52,8 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
 {{ end }}
 
-##
-# Define error pages for better usability
-##
-root /var/www/error_pages;
-
-# This means that the container is defined but it is stopped
-error_page 502 /502.html;
-
-# This means that the domain is not mapped anywhere
-error_page 404 /404.html;
-
 server {
+        root /var/www/error_pages;
         server_name _; # This is just an invalid value which will never trigger on a real hostname.
         listen 80;
         access_log /var/log/nginx/access.log vhost;
@@ -71,6 +61,7 @@ server {
 }
 
 server {
+        root /var/www/error_pages;
         server_name _; # This is just an invalid value which will never trigger on a real hostname.
         listen 8080;
         access_log /var/log/nginx/access.log vhost;
