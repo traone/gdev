@@ -5,6 +5,9 @@
   vars:
     gdev_env_dir: /usr/local/gdev-env
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
+
+    # This is alias for localhost loopback so that containers can connect to software running in osx ports
+    gdev_docker_host_ip: 10.254.254.254
     machine_ip: 127.0.0.1
 
   tasks:
@@ -23,12 +26,10 @@
     - name: Install pip
       easy_install: name=pip state=latest
       become: yes
-      become_method: sudo
 
     - name: Install unison-fsmonitor dependencies
       pip: name=MacFSEvents state=present
       become: yes
-      become_method: sudo
 
     - name: Install unison-fsmonitor for mac (unox)
       get_url:
@@ -58,7 +59,6 @@
         mode: 0755
       # If this was somehow root owned make sure it's not anymore
       become: yes
-      become_method: sudo
 
     - name: Symlink gdev bin to PATH
       file:
@@ -66,6 +66,19 @@
         dest: /usr/local/bin/gdev
         state: link
       tags: ['pre-install']
+
+    - name: Check that host ip looback is running
+      command: "ifconfig lo0 alias 10.254.254.254"
+      become: yes
+
+    - name: Ensure host ip looback after reboots
+      template:
+        src: templates/com.gdev.docker_ip_alias.plist.j2
+        dest: /Library/LaunchDaemons/com.gdev.docker_loopback_alias.plist
+        owner: root
+        group: wheel
+        mode: 0644
+      become: yes
 
     - name: Start docker for mac
       command: "open -a docker"
@@ -118,7 +131,7 @@
 
     - name: Create dns resolver files at /etc/resolver/
       template:
-        src: "{{ gdev_env_dir }}/ansible/resolver-dev.conf.j2"
+        src: "templates/resolver-dev.conf.j2"
         dest: "/etc/resolver/{{item.domain}}"
         force: yes
       become: yes

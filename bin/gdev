@@ -140,9 +140,7 @@ HEREDOC
 
   # Updating is just running bootstrap again with newer bootstrap bin
   def update(args)
-    if (args[0] == "dns")
-      system('ansible-playbook /usr/local/gdev-env/ansible/mac.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
-    elsif (args[0].nil?)
+    if (args[0].nil?)
       system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/bootstrap')
       # Rebuild and reload all services
       puts "Refreshing all gdev services..."
@@ -255,6 +253,11 @@ HEREDOC
   end
 
   def sync(args)
+
+    unless File.exist?('docker-compose.yml')
+        puts "ERROR: docker-compose.yml doesn't exist. You need to run this command in the project root."
+        exit
+    end
 
     options = ['-auto', '-batch', '-prefer newer']
     ignore = ['.git', '.docker','*.unison.tmp']
