@@ -46,6 +46,8 @@
       become_method: sudo
 
     - name: Install Docker-py
+      become: yes
+      become_method: sudo
       pip:
         name: docker-py
 
