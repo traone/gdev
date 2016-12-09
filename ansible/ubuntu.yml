@@ -12,6 +12,8 @@
       pause: seconds=5
     
     - name: Make sure apt-transport-https is installed
+      become: yes
+      become_method: sudo
       apt:
         pkg: "apt-transport-https"
         state: installed
