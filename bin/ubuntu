@@ -64,11 +64,11 @@ which brew
 if [[ $? != 0 ]] ; then
     echo 'There's something wrong with Brew! Check this out separately'
     return 0
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
-    PATH="$HOME/.linuxbrew/bin:$PATH"
-    echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
-    echo 'export MANPATH="$HOME/.linuxbrew/share/man:$MANPATH"' >>~/.bash_profile
-    echo 'export INFOPATH="$HOME/.linuxbrew/share/info:$INFOPATH"' >>~/.bash_profile
+    #ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
+    #PATH="$HOME/.linuxbrew/bin:$PATH"
+    #echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
+    #echo 'export MANPATH="$HOME/.linuxbrew/share/man:$MANPATH"' >>~/.bash_profile
+    #echo 'export INFOPATH="$HOME/.linuxbrew/share/info:$INFOPATH"' >>~/.bash_profile
 else
     brew update
 fi
@@ -111,6 +111,7 @@ if [ -d "$GDEV_DIR" ]; then
 else
   echo "Checking out gdev repo..."
   sudo git clone https://github.com/$REPO.git $GDEV_DIR 2>/dev/null
+  sudo chmod -R og+rw $GDEV_DIR
 fi
 
 echo 'Handing Playbook to Ansible (will require your sudo password)...'
