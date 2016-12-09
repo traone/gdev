@@ -72,6 +72,12 @@
         state: link
         force: yes
       tags: ['pre-install']
+      
+    - name: Adding user to docker group
+      user: 
+        name: "{{ansible_env.USER}}"
+        groups: docker
+        append: yes
 
     - name: Make sure docker is running
       become: yes
