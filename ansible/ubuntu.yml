@@ -70,6 +70,7 @@
         src: "{{gdev_env_dir}}/bin/gdev"
         dest: /usr/local/bin/gdev
         state: link
+        force: yes
       tags: ['pre-install']
 
     - name: Make sure docker is running
