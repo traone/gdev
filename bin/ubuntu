@@ -3,8 +3,8 @@
 #Install Ubuntu deps
 sudo apt install build-essential curl git python-setuptools python-pip python-future ruby linuxbrew-wrapper python-openssl
 
-# We need at least ansible 2.0 for blockinfile directive
-ANSIBLE_NEEDED="2.0"
+# We need at least ansible 2.2 for blockinfile directive
+ANSIBLE_NEEDED="2.2"
 
 # This is fork from original
 REPO='devgeniem/gdev'
@@ -62,13 +62,8 @@ free_disk_space() {
 echo 'Installing or Updating Linuxbrew...'
 which brew
 if [[ $? != 0 ]] ; then
-    echo 'There's something wrong with Brew! Check this out separately'
+    echo 'Theres something wrong with Brew! Check this out separately'
     return 0
-    #ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
-    #PATH="$HOME/.linuxbrew/bin:$PATH"
-    #echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
-    #echo 'export MANPATH="$HOME/.linuxbrew/share/man:$MANPATH"' >>~/.bash_profile
-    #echo 'export INFOPATH="$HOME/.linuxbrew/share/info:$INFOPATH"' >>~/.bash_profile
 else
     brew update
 fi
@@ -78,15 +73,13 @@ echo -e "\n\n"
 echo 'Installing or Updating Ansible...'
 which ansible-playbook
 if [[ $? != 0 ]] ; then
-  echo "ansible installation..."
-    brew install ansible
+  echo "ansible installation failed, check OS/Pip level installs"
+    #brew install ansible
 else # Ansible needs to be at least 1.9
   ANSIBLE_VERSION=$(ansible --version | grep ansible | cut -d " " -f 2)
   if update_needed $ANSIBLE_VERSION $ANSIBLE_NEEDED; then
     echo "Ansible is too old: $ANSIBLE_VERSION. We need >$ANSIBLE_NEEDED"
-    echo "Updating ansible through homebrew..."
-    brew upgrade ansible
-    brew link --overwrite ansible
+    echo "Tahan pip install jotta saa updaten ansiblelle."
   else
     echo "Ansible version is $ANSIBLE_VERSION. Update not needed..."
   fi
