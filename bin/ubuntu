@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #Install Ubuntu deps
-sudo apt install build-essential curl git python-setuptools ruby
+sudo apt install build-essential curl git python-setuptools python-pip python-future ruby linuxbrew-wrapper python-openssl
 
 # We need at least ansible 2.0 for blockinfile directive
 ANSIBLE_NEEDED="2.0"
@@ -62,6 +62,8 @@ free_disk_space() {
 echo 'Installing or Updating Linuxbrew...'
 which brew
 if [[ $? != 0 ]] ; then
+    echo 'There's something wrong with Brew! Check this out separately'
+    return 0
     ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
     PATH="$HOME/.linuxbrew/bin:$PATH"
     echo 'export PATH="$HOME/.linuxbrew/bin:$PATH"' >>~/.bash_profile
