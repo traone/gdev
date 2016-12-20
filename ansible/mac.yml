@@ -8,7 +8,6 @@
 
     # This is alias for localhost loopback so that containers can connect to software running in osx ports
     gdev_docker_host_ip: 10.254.254.254
-    machine_ip: 127.0.0.1
 
   tasks:
     - name: Give sudo password some time to load correctly
@@ -119,6 +118,7 @@
       file: path=/etc/resolver state=directory mode=0755
       become: yes
       become_method: sudo
+      tags: ['dns']
 
     - name: Delete resolver files to trigger dns change
       file:
@@ -127,7 +127,8 @@
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
 
     - name: Create dns resolver files at /etc/resolver/
       template:
@@ -137,4 +138,5 @@
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
