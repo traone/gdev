@@ -46,6 +46,8 @@
         name: docker-py
         
     - name: Installing docker compose
+      become: yes
+      become_method: sudo
       pip:
         name: docker-compose
         state: present
