@@ -48,7 +48,6 @@
     - name: Installing docker compose
       pip:
         name: docker-compose
-        version: "{{ docker_compose_version if docker_compose_version else omit }}"
         state: present
       
 
