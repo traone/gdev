@@ -45,10 +45,11 @@
       pip:
         name: docker-py
         
-    - name: Install Docker Compose
-      become: yes
-      become_method:sudo
-      shell: curl -L "https://github.com/docker/compose/releases/download/1.9.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose
+    - name: Installing docker compose
+      pip:
+        name: docker-compose
+        version: "{{ docker_compose_version if docker_compose_version else omit }}"
+        state: present
       
 
     - name: Create gdev directory
