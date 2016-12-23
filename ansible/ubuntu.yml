@@ -120,24 +120,10 @@
       become: yes
       become_method: sudo
 
-    - name: Create resolver directory
-      file: path=/etc/resolver state=directory mode=0755
-      become: yes
-      become_method: sudo
-
-    - name: Delete resolver files to trigger dns change
-      file:
-        path: "/etc/resolver/{{item.domain}}"
-        state: absent
-      become: yes
-      become_method: sudo
-      with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
-
-    - name: Create dns resolver files at /etc/resolver/
+    - name: Create dns resolver files at /etc/NetworkManager/dnsmasq.d/
       template:
-        src: "{{ gdev_env_dir }}/ansible/resolver-dev.conf.j2"
-        dest: "/etc/resolver/{{item.domain}}"
+        src: "{{ gdev_env_dir }}/ansible/nm-dnsmasq-dev.conf.j2"
+        dest: "/etc/NetworkManager/dnsmasq.d/{{item.domain}}"
         force: yes
       become: yes
       become_method: sudo
