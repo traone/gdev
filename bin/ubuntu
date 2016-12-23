@@ -6,6 +6,9 @@ sudo apt install build-essential curl git python-setuptools python-pip python-fu
 # We need at least ansible 2.2 for blockinfile directive
 ANSIBLE_NEEDED="2.2"
 
+#Upgrade Pip
+pip install --upgrade pip
+
 # This is fork from original
 REPO='devgeniem/gdev'
 
@@ -73,13 +76,12 @@ echo -e "\n\n"
 echo 'Installing or Updating Ansible...'
 which ansible-playbook
 if [[ $? != 0 ]] ; then
-  echo "ansible installation failed, check OS/Pip level installs"
-    #brew install ansible
+  sudo pip install ansible
 else # Ansible needs to be at least 1.9
   ANSIBLE_VERSION=$(ansible --version | grep ansible | cut -d " " -f 2)
   if update_needed $ANSIBLE_VERSION $ANSIBLE_NEEDED; then
     echo "Ansible is too old: $ANSIBLE_VERSION. We need >$ANSIBLE_NEEDED"
-    echo "Tahan pip install jotta saa updaten ansiblelle."
+    sudo pip install ansible
   else
     echo "Ansible version is $ANSIBLE_VERSION. Update not needed..."
   fi
@@ -114,4 +116,4 @@ echo -e "\n"
 ansible-playbook $GDEV_DIR/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass -vvvv
 
 # Help user to debug usual problems
-echo "If you had any errors you can try reboot your machine and then running this again."
+echo "If you had any errors you can try reboot your machine and then running this again. Do this especially if you've installed on an empty system."
