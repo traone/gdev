@@ -129,3 +129,10 @@
       become_method: sudo
       with_items:
         - { ip: "{{ machine_ip }}", domain: test }
+
+    - name: Restart network-manager
+      service: 
+        name: network-manager
+        state: restarted
+      become: yes
+      become_method: sudo
