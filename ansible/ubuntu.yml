@@ -80,6 +80,8 @@
         name: "{{ansible_env.USER}}"
         groups: docker
         append: yes
+      become: yes
+      become_method: sudo
 
     - name: Make sure docker is running
       become: yes
