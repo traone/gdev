@@ -8,7 +8,6 @@
 
     # This is alias for localhost loopback so that containers can connect to software running in osx ports
     gdev_docker_host_ip: 10.254.254.254
-    machine_ip: 127.0.0.1
 
   tasks:
     - name: Give sudo password some time to load correctly
@@ -26,17 +25,6 @@
     - name: Install pip
       easy_install: name=pip state=latest
       become: yes
-
-    - name: Install unison-fsmonitor dependencies
-      pip: name=MacFSEvents state=present
-      become: yes
-
-    - name: Install unison-fsmonitor for mac (unox)
-      get_url:
-        url: https://raw.githubusercontent.com/hnsl/unox/4cf16fa20ec1f5b2fcafd7b78cac6dfedca18a86/unox.py
-        dest: /usr/local/bin/unison-fsmonitor
-        mode: 0755
-        checksum: sha256:cb49197eef7a19f12bd46c921a1e3a388f8f26e77307eb3f366d274003859201
 
     - name: Check gdev-env directory permissions
       file:
@@ -119,6 +107,7 @@
       file: path=/etc/resolver state=directory mode=0755
       become: yes
       become_method: sudo
+      tags: ['dns']
 
     - name: Delete resolver files to trigger dns change
       file:
@@ -127,7 +116,8 @@
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
 
     - name: Create dns resolver files at /etc/resolver/
       template:
@@ -137,4 +127,5 @@
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
