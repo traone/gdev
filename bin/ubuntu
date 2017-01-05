@@ -116,4 +116,5 @@ echo -e "\n"
 ansible-playbook $GDEV_DIR/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass -vvvv
 
 # Help user to debug usual problems
-echo "If you had any errors you can try reboot your machine and then running this again. Do this especially if you've installed on an empty system."
+echo "If this was your first time installing Gdev, please restart your system now to make sure all software gets installed correctly ."
+echo "If you had any errors you can try reboot your machine and then running this again."
