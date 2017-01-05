@@ -5,7 +5,7 @@
   vars:
     gdev_env_dir: "/usr/local/gdev-env"
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
-    machine_ip: 127.0.0.1
+    machine_ip: 172.16.0.1
 
   tasks:
   
