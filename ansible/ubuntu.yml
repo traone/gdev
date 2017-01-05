@@ -84,13 +84,13 @@
         force: yes
       tags: ['pre-install']
       
-    #- name: Adding user to docker group
-    #  user: 
-    #    name: "{{ansible_env.USER}}"
-    #    groups: docker
-    #    append: yes
-    #  become: yes
-    #  become_method: sudo
+    - name: Adding user to docker group
+      user: 
+        name: "{{ansible_env.USER}}"
+        groups: docker
+        append: yes
+      become: yes
+      become_method: sudo
 
     - name: Make sure docker is running
       become: yes
