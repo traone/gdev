@@ -89,6 +89,9 @@
         append: yes
       become: yes
       become_method: sudo
+      
+    - name: Add user to docker group in session
+      command: "newgrp docker"
 
     - name: Make sure docker is running
       become: yes
