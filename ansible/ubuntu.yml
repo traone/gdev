@@ -18,7 +18,7 @@
         pkg: "apt-transport-https"
         state: installed
 
-   - name: Ensure the system can use the HTTPS transport for APT
+    - name: Ensure the system can use the HTTPS transport for APT
       stat:
        path: /usr/lib/apt/methods/https
       register: apt_https_transport
