@@ -5,10 +5,14 @@
   vars:
     gdev_env_dir: "/usr/local/gdev-env"
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
-    machine_ip: 172.16.0.1
+    machine_ip: 10.254.254.254
 
   tasks:
   
+    - name: lisataan gdev ip
+    
+    - name: lisataan gdev ip osoitteistoon
+    
     - name: Make sure apt-transport-https is installed
       become: yes
       become_method: sudo
