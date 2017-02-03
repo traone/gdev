@@ -10,9 +10,6 @@
     gdev_docker_host_ip: 10.254.254.254
 
   tasks:
-    - name: Give sudo password some time to load correctly
-      pause: seconds=5
-
     - name: Install Docker for Mac
       homebrew_cask: name=docker state=present
 
@@ -22,9 +19,14 @@
     - name: Install python
       homebrew: name=python state=present
 
+    - name: Check that pip is installed
+      stat: path=/usr/local/bin/pip
+      register: pip_installed
+
     - name: Install pip
       easy_install: name=pip state=latest
       become: yes
+      when: not pip_installed.stat.exists
 
     - name: Check gdev-env directory permissions
       file:
@@ -66,6 +68,14 @@
         owner: root
         group: wheel
         mode: 0644
+      become: yes
+
+    - name: Add localunixsocket.local hostname in /etc/hosts
+      blockinfile:
+        dest: /etc/hosts
+        marker: "# {mark}: Gdev prevent docker for OSX from slowing in certain networks"
+        block: 127.0.0.1 localunixsocket.local
+      tags: [ 'hosts' ]
       become: yes
 
     - name: Start docker for mac
