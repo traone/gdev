@@ -39,7 +39,7 @@ Commands:
 HEREDOC
 
   PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start stop}
-  PROXY_MODIFIED=%w{up run}
+  PROXY_MODIFIED=%w{up run help}
   OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync}
 
   def initialize(args)
@@ -49,6 +49,20 @@ HEREDOC
       send(args[0].to_sym, args)
     elsif OTHER_COMMANDS.include?(args[0])
       send(args.shift.to_sym, args)
+    else
+      puts MAIN_HELP_BANNER
+    end
+  end
+
+  # Show docker-compose command helpers for original commands
+  def help(args)
+    if args.size > 1
+      if (PROXY_UNMODIFIED_TO_COMPOSE.include?(args[1]) or PROXY_MODIFIED.include?(args[1]))
+        args.unshift("docker-compose")
+        system(args.join(" "))
+      elsif OTHER_COMMANDS.include?(args[1])
+        puts("This is a gdev custom command and not part of docker-compose. See wiki for explanation.")
+      end
     else
       puts MAIN_HELP_BANNER
     end
