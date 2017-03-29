@@ -181,10 +181,17 @@ HEREDOC
     end
   end
 
-  # open shell into container
+  # open shell into container, default to web and bash
   def shell(args)
-    container=`docker-compose ps -q web`.strip
-    system("docker exec -it #{container} bash")
+    if(!args[0])
+        target = 'web'
+        to = 'bash'
+    else
+        target = args[0]
+        to = args[1]
+    end
+    container=`docker-compose ps -q #{target}`.strip
+    system("docker exec -it #{container} #{to}")
   end
 
   # Run command in web container
