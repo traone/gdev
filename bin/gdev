@@ -43,7 +43,7 @@ HEREDOC
   PROXY_MODIFIED=%w{up run}
   OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync create}
 
-  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --name="My app" --description="Short description of my app" --sitename=myapp --envvars=envvars.json --stage=stage.mydomain.com --production=cloud.mydomain.com --git=ssh://git@mydomain:/my-app.git'
+  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --envvars=envvars.json --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
 
   def initialize(args)
     if PROXY_UNMODIFIED_TO_COMPOSE.include?(args[0])
@@ -642,12 +642,6 @@ HEREDOC
     project = Hash.new
     puts "----------------------= Create new project =---------------------"
 
-    puts "Name for the project:"
-    project['name']=gets.chomp
-    puts ""
-    puts "Project description:"
-    project['description']=gets.chomp
-    puts ""
     puts "Sitename (lowercase characters, dashes and numbers only):"
     project['sitename']=gets.chomp
     unless validate_string(project['sitename'])
@@ -683,7 +677,7 @@ HEREDOC
     end
     # run npm install in theme directory?
     # TODO: default value
-    puts "Run npm install in theme directory? (Y/N)"
+    puts "Run npm install in theme directory after setup? (Y/N)"
     npm_install=gets.chomp
     if ['Y','y'].include?(npm_install)
       project['npm_install']=true
@@ -709,7 +703,7 @@ HEREDOC
     if defaults['production']
       puts "Flynn production cloud address ("+defaults['production']+default_marker+"):"
     else
-      puts "Flynn production cloud address (cloud.mydomain.com):"
+      puts "Flynn production cloud address (production.mydomain.com):"
     end
     project['production']=gets.chomp
     if project['production'] == '' and defaults['production']
