@@ -107,7 +107,7 @@ create:
       production: production.yourdomain.com
       smtp_host: "172.17.0.1"
       components: "dustpress"
-      theme: "ssh://git@gitdomain.com/path/dustpress-theme-boilerplate.git"
+      theme: "git@github.com:devgeniem/wp-starter-dustpress-theme.git"
     nodejs: TODO
     silverbullet: TODO
 ```

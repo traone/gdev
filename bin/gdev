@@ -43,7 +43,7 @@ HEREDOC
   PROXY_MODIFIED=%w{up run}
   OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync create}
 
-  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --envvars=envvars.json --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
+  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
 
   def initialize(args)
     if PROXY_UNMODIFIED_TO_COMPOSE.include?(args[0])
@@ -397,7 +397,7 @@ HEREDOC
     # got arguments
     unless args.empty?
       # TODO: parse_args method
-      required_args = ['sitename', 'envvars', 'type']
+      required_args = ['sitename', 'type']
       # loop given arguments
       used_args = []
       args_hash = Hash.new
@@ -512,7 +512,12 @@ HEREDOC
         themename_file_names = [
           "#{args['sitename']}/.drone.yml", 
           "#{args['sitename']}/config/application.php",
-          "#{args['sitename']}/docker-compose.yml"
+          "#{args['sitename']}/docker-compose.yml",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/lib/extras.php",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/lib/images.php",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/lib/setup.php",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/package.json",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/style.css"
         ]
         themename_file_names.each do |file_name|
           text = File.read(file_name)
@@ -527,6 +532,9 @@ HEREDOC
           new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
           File.open(file_name, "w") {|file| file.puts new_contents }
         end
+
+        # TODO: replace themename-textdomain (lowercase) from lib/setup.php and style.css
+
         # change project test address in docker-compose.yml for example wordpress.test -> client-name.test
         docker_compose = File.read("#{args['sitename']}/docker-compose.yml")
         docker_compose_replace = docker_compose.gsub(/wordpress.test/, "#{args['sitename']}.test")
@@ -535,25 +543,10 @@ HEREDOC
         # TODO: Add all people working in the project into authors section of composer.json and rename the project devgeniem/wp-project->devgeniem/client in composer.json
         
         # composer install
-        puts "Running composer install..."
-        puts `cd #{args["sitename"]}; composer install`
+        #puts "Running composer install..."
+        #puts `cd #{args["sitename"]}; composer install`
         puts "Running composer update..."
         puts `cd #{args["sitename"]}; composer update`
-        # gdev up
-        puts "Running gdev up..."
-        puts `cd #{args["sitename"]}; gdev up`
-
-        # seed (install wp)
-        puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
-        sleep(10)
-        puts "Running scripts/seed.sh..."
-        puts `cd #{args["sitename"]}; gdev run web ./scripts/seed.sh`
-        puts ""
-
-        # temporary fix for redis-cache plugin, remove this when plugin works
-        puts "Copying object-cache.php in place (temporary fix for redis-cache plugin)..."
-        `cp #{args["sitename"]}/web/app/object-cache.php #{args["sitename"]}/web/app/plugins/redis-cache/includes`
-        puts ""
 
         # install theme npm modules
         if args['npm_install']
@@ -561,11 +554,24 @@ HEREDOC
           puts `cd #{args["sitename"]}/web/app/themes/#{args["sitename"]}; npm install`
           puts ""
         end
+        
+        # TODO: seed (install wp)
+        #puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
+        #sleep(10)
+        #puts "Running scripts/seed.sh..."
+        #puts `cd #{args["sitename"]}; gdev run web ./scripts/seed.sh`
+        #puts ""
+
+        # temporary fix for redis-cache plugin, remove this when plugin works
+        #puts "Copying object-cache.php in place (temporary fix for redis-cache plugin)..."
+        #`cp #{args["sitename"]}/web/app/object-cache.php #{args["sitename"]}/web/app/plugins/redis-cache/includes`
+        #puts ""
+
 
         # gdev reload
-        puts "Reloading gdev..."
-        puts `cd #{args["sitename"]}; gdev reload`
-        puts ""
+        #puts "Reloading gdev..."
+        #puts `cd #{args["sitename"]}; gdev reload`
+        #puts ""
 
         # set git repository
         if args['git'] == ""
@@ -575,6 +581,11 @@ HEREDOC
           puts "Changing git remote to #{args['git']}..."
           puts `cd #{args["sitename"]}; git remote set-url origin #{args["git"]}`
         end
+        puts ""
+
+        # gdev up
+        puts "Running gdev up..."
+        puts `cd #{args["sitename"]}; gdev up`
         puts ""
 
         puts "Point your browser to https://#{args['sitename']}.test/wp-admin and log in"
@@ -592,15 +603,19 @@ HEREDOC
         puts "$ flynn -c stage -a #{args['sitename']} env set WP_ENV=staging"
         puts "$ flynn -c stage -a #{args['sitename']} env set WP_HOME=https://#{args['sitename']}.#{args['stage']}"
         puts "$ flynn -c stage -a #{args['sitename']} env set WP_SITEURL=https://#{args['sitename']}.#{args['stage']}"
+        puts "$ flynn -c stage -a #{args['sitename']} env set SERVER_NAME=#{args['sitename']}.#{args['stage']}"
+        puts ""
+        puts "Set other environment variables as needed (eg. SMTP_HOST, SMTP_USER etc)"
+        puts "Refer to your (company) specific documentation for more settings to set up"
         puts ""
         puts "To deploy your project to stage cluster, go to project directory root and run:"
-        puts "$ docker build --pull -t devgeniem/#{args['sitename']}:stable ."
-        puts "$ flynn -c stage -a #{args['sitename']} docker push devgeniem/#{args['sitename']}:stable"
+        puts "$ docker build --pull -t devgeniem/#{args['sitename']} ."
+        puts "$ flynn -c stage -a #{args['sitename']} docker push devgeniem/#{args['sitename']}"
         puts ""
         puts "Scale cluster as needed:"
         puts "$ flynn -c stage -a #{args['sitename']} scale app=1"
         puts ""
-        puts "More help with Flynn, visit: <url>"
+        puts "More help with Flynn, visit: https://flynn.io/docs/basics"
       else
         puts "Directory "+args['sitename']+" exists, please use another sitename."
         puts CREATE_HELP
@@ -663,9 +678,9 @@ HEREDOC
       project['components']=gets.chomp
       puts ""
       if (defaults['theme'])
-        puts "Theme repository address, ssh or https ("+defaults['theme']+default_marker+"):"
+        puts "Theme repository address ("+defaults['theme']+default_marker+"):"
       else
-        puts "Theme repository address, ssh or https (ssh://git@domain/theme.git):"
+        puts "Theme repository address (git@domain/theme.git):"
       end
       project['theme']=gets.chomp
       if project['theme'] == '' and defaults['theme']
@@ -714,9 +729,6 @@ HEREDOC
     end
     puts ""
 
-    puts "Environment variables file (envvars.yml)"
-    project['envvars']=gets.chomp
-    puts ""
     puts "Project git repository, ssh or https (ssh://git@domain/my-app.git):"
     project['git']=gets.chomp
     
