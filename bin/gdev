@@ -524,6 +524,15 @@ HEREDOC
           new_contents = text.gsub(/THEMENAME/, "#{args['sitename']}")
           File.open(file_name, "w") {|file| file.puts new_contents }
         end
+        textdomain_file_names = [
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/lib/setup.php",
+          "#{args['sitename']}/web/app/themes/#{args['sitename']}/style.css"
+        ]
+        textdomain_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/themename-textdomain/, "#{args['sitename'].downcase}-textdomain")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
         projectname_file_names = [
           "#{args['sitename']}/.drone.yml"
         ]
@@ -532,8 +541,6 @@ HEREDOC
           new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
           File.open(file_name, "w") {|file| file.puts new_contents }
         end
-
-        # TODO: replace themename-textdomain (lowercase) from lib/setup.php and style.css
 
         # change project test address in docker-compose.yml for example wordpress.test -> client-name.test
         docker_compose = File.read("#{args['sitename']}/docker-compose.yml")
@@ -657,10 +664,10 @@ HEREDOC
     project = Hash.new
     puts "----------------------= Create new project =---------------------"
 
-    puts "Sitename (lowercase characters, dashes and numbers only):"
+    puts "Sitename (normal characters, dashes and numbers only):"
     project['sitename']=gets.chomp
     unless validate_string(project['sitename'])
-      puts "Sitename (lowercase characters, dashes and numbers only):"
+      puts "Sitename (normal characters, dashes and numbers only):"
       project['sitename']=gets.chomp
     end
     puts ""
