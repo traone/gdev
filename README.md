@@ -86,6 +86,30 @@ $ docker ps -a
 
 # Open bash into any container
 $ docker exec -it $CONTAINER_ID bash
+
+# Create new project (interactive wizard for setting up project)
+$ gdev create
+```
+
+## Creating new project
+Before creating a new project you should setup a GIT repository for your new project.
+
+It's also advisable to create a config file to your home directory with some default values. File should be named ~/.gdev/gdevconf.yml
+
+Example gdevconf.yml:
+```
+create:
+  defaults:
+    wordpress:
+      # Flynn stage cloud address
+      stage: stage.yourdomain.com
+      # Flynn production cloud address
+      production: production.yourdomain.com
+      smtp_host: "172.17.0.1"
+      components: "dustpress"
+      theme: "git@github.com:devgeniem/wp-starter-dustpress-theme.git"
+    nodejs: TODO
+    silverbullet: TODO
 ```
 
 ## Workflow
@@ -104,6 +128,8 @@ To resolve this delete stopped containers, dangling images and dangling volumes.
 ```
 $ gdev cleanup
 ```
+
+If Docker for Mac still has a bug with freeing up disk space, dump databases you need and reset Docker for Mac settings. This will free all the space Docker is hogging. Then you will need to set up your projects again (import databases).
 
 #### When in doubt, update and restart everything
 
@@ -129,6 +155,7 @@ $ gdev reload
 
 * [Nicholas Silva](https://github.com/silvamerica), creator.
 * [Onni Hakala](https://github.com/onnimonni), forked the gdev version.
+* [Ville Pietarinen](https://github.com/villepietarinen), initial sync and create commands, fixes and development.
 
 ## Contributing
 
@@ -142,4 +169,4 @@ $ gdev reload
 
 `gdev` is available under the MIT license. See the LICENSE file for more info.
 
-Copyright 2016 Geniem Oy.
+Copyright 2017 Geniem Oy.
