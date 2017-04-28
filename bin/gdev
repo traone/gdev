@@ -17,7 +17,8 @@ Options:
 
 Commands:
   build              Build or rebuild services
-  cleanup           Deletes docker containers, images and volumes
+  cleanup            Deletes docker containers, images and volumes
+  create             Create new project
   exec               Run command inside web container
   help               Get help on a command
   kill               Kill containers
@@ -32,15 +33,17 @@ Commands:
   service            Manage gdev services (nginx and dnsmasq, mail)
   start              Start services
   stop               Stop services
+  sync               Syncronize files with data container
   up                 Create and start containers
   update             Update gdev environment
-  sync               Syncronize files with data container
 
 HEREDOC
 
   PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start stop}
   PROXY_MODIFIED=%w{up run help}
-  OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync}
+  OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync create}
+
+  CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
 
   def initialize(args)
     if PROXY_UNMODIFIED_TO_COMPOSE.include?(args[0])
@@ -195,10 +198,17 @@ HEREDOC
     end
   end
 
-  # open shell into container
+  # open shell into container, default to web and bash
   def shell(args)
-    container=`docker-compose ps -q web`.strip
-    system("docker exec -it #{container} bash")
+    if(!args[0])
+        target = 'web'
+        to = 'bash'
+    else
+        target = args[0]
+        to = args[1]
+    end
+    container=`docker-compose ps -q #{target}`.strip
+    system("docker exec -it #{container} #{to}")
   end
 
   # Run command in web container
@@ -326,7 +336,7 @@ HEREDOC
     data_docker_id=`docker-compose ps -q #{container_name}`
     if $?.success? and not data_docker_id.empty?
         # Get the data container port
-        data_docker_ports = %x(docker inspect --format='{{json .NetworkSettings.Ports}}' #{data_docker_id})
+        data_docker_ports = `docker inspect --format='{{json .NetworkSettings.Ports}}' #{data_docker_id}`
         if $?.success? and data_docker_ports
             begin
                 data_docker_ports_obj = JSON.parse(data_docker_ports)
@@ -392,6 +402,431 @@ HEREDOC
 
   def is_osx?
     RUBY_PLATFORM.include? 'darwin'
+  end
+
+  # Create new project command (validate arguments and start creating app or use wizard)
+  def create(args)
+    # validate arguments
+
+    # got arguments
+    unless args.empty?
+      # TODO: parse_args method
+      required_args = ['sitename', 'type']
+      # loop given arguments
+      used_args = []
+      args_hash = Hash.new
+      args.each { |argument|
+        arg = argument.split('=')
+        if arg.length == 2
+          # every argument has value, check for required args
+
+          # split argument to key value pair
+          key = arg[0]
+          val = arg[1]
+
+          # remove all dashes from beginning of key
+          key.sub! /\A-+/, ''
+          # check for duplicate arguments
+          if used_args.include?(key)
+            puts "Duplicate arguments"
+            puts CREATE_HELP
+            exit
+          else
+            # keep track of used arguments
+            used_args.push(key)
+            
+            # TODO: validate sitename (only lowercase chars, dashes or numbers)
+
+            # set key and value to hash
+            args_hash[key]=val
+          end
+
+          if required_args.include?(key)
+            required_args.delete(key)
+          end
+
+        else
+          # argument value missing, exit script and show help
+          puts 'Argument '+arg[0]+' needs value'
+          puts CREATE_HELP
+          exit
+        end
+      }
+
+      if required_args.length == 0
+        # all required arguments given, proceed
+      else
+        # required arguments missing, exit script and show help
+        puts "Arguments required:"
+        puts required_args
+        puts CREATE_HELP
+        exit
+      end
+
+      # start creating project
+      create_app(args_hash)
+
+    else
+      # no arguments given, start wizard
+      create_wizard()
+
+    end
+
+  end
+
+  # Create new site
+  def create_app(args)
+
+    unless validate_string(args['sitename'])
+      puts "Sitename not valid."
+      puts CREATE_HELP
+      exit
+    end
+
+    puts "Creating project "+args['sitename']+"..."
+
+    #puts args.inspect
+
+    themename=args['sitename'].tr('-','');
+
+    case args['type']
+    when "wordpress"
+      # setup wordpress project
+      # check if project directory already exists
+      unless Dir.exists?(args['sitename'])
+        # clone wp-project from github
+        puts "Cloning wp-project from git@github.com:devgeniem/wp-project.git to #{args['sitename']}..."
+        puts `git clone git@github.com:devgeniem/wp-project.git #{args['sitename']}`
+        if args['theme']
+          puts "Cloning theme from #{args['theme']}..."
+          puts `git clone #{args['theme']} #{args['sitename']}/web/app/themes/#{themename}`
+          puts "Removing .git directory from theme..."
+          `rm -rf #{args['sitename']}/web/app/themes/#{themename}/.git`
+          puts ""
+        else
+          # TODO: get default theme url from ~/.gdev/gdevconf.yml
+          # do not get theme if default is not set
+          puts "TODO"
+          puts "Cloning default theme if set ~/.gdev/gdevconf.yml"
+        end
+        # check which components to install if any
+        if args['components']
+          components_array=args['components'].split(',')
+          components_array.each { |component|
+            case component
+            when 'dustpress'
+              # require dustpress components
+              puts "Installing dustpress, dustpress-debugger and dustpress-js with composer..."
+              puts `cd #{args["sitename"]}; composer require devgeniem/dustpress:1.* devgeniem/dustpress-debugger:1.* devgeniem/dustpress-js:*`
+            else
+              puts "Component "+component+" not supported."
+            end
+          }
+        end
+        # replace all THEMENAME (namespace) references from all files from this project to your project name
+        puts "Replacing 'THEMENAME' strings from all project files with '#{args['sitename']}'..."
+        themename_file_names = [
+          "#{args['sitename']}/.drone.yml", 
+          "#{args['sitename']}/config/application.php",
+          "#{args['sitename']}/docker-compose.yml",
+          "#{args['sitename']}/web/app/themes/#{themename}/lib/extras.php",
+          "#{args['sitename']}/web/app/themes/#{themename}/lib/images.php",
+          "#{args['sitename']}/web/app/themes/#{themename}/lib/setup.php",
+          "#{args['sitename']}/web/app/themes/#{themename}/package.json",
+          "#{args['sitename']}/web/app/themes/#{themename}/style.css"
+        ]
+        themename_file_names.each do |file_name|
+          text = File.read(file_name)
+          # remove dashes from namespace strings
+          new_contents = text.gsub(/THEMENAME/, "#{args['sitename'].tr('-','')}")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+        puts "Replacing 'themename-textdomain' strings from all project files with '#{args['sitename'].downcase}-td'..."
+        textdomain_file_names = [
+          "#{args['sitename']}/web/app/themes/#{themename}/lib/setup.php",
+          "#{args['sitename']}/web/app/themes/#{themename}/style.css"
+        ]
+        textdomain_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/themename-textdomain/, "#{args['sitename'].downcase}-td")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+        puts "Replacing 'wordpress.test' strings from all project files with '#{args['sitename'].downcase}.test'..."
+        wordpresstest_file_names = [
+          "#{args['sitename']}/.drone.yml",
+          "#{args['sitename']}/docker-compose.yml",
+          "#{args['sitename']}/scripts/seed.sh"
+        ]
+        wordpresstest_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/wordpress.test/, "#{args['sitename'].downcase}.test")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+
+        # change project test address in docker-compose.yml for example wordpress.test -> client-name.test
+        #docker_compose = File.read("#{args['sitename']}/docker-compose.yml")
+        #docker_compose_replace = docker_compose.gsub(/wordpress.test/, "#{args['sitename']}.test")
+        #File.open("#{args['sitename']}/docker-compose.yml", "w") {|file| file.puts docker_compose_replace }
+
+        # TODO: Add all people working in the project into authors section of composer.json and rename the project devgeniem/wp-project->devgeniem/client in composer.json
+        
+        # composer install
+        #puts "Running composer install..."
+        #puts `cd #{args["sitename"]}; composer install`
+        puts "Running composer update..."
+        puts `cd #{args["sitename"]}; composer update`
+
+        # install theme npm modules
+        if args['npm_install']
+          puts "Installing theme node modules..."
+          puts `cd #{args["sitename"]}/web/app/themes/#{themename}; npm install`
+          puts ""
+        end
+        
+        # set git repository
+        if args['git'] == ""
+          puts "NO GIT REPOSITORY GIVEN!"
+        puts `cd #{args["sitename"]}; git remote rm origin`
+        else
+          puts "Changing git remote to #{args['git']}..."
+          puts `cd #{args["sitename"]}; git remote set-url origin #{args["git"]}`
+        end
+        puts ""
+
+        # gdev up
+        puts "Running gdev up..."
+        puts `cd #{args["sitename"]}; gdev up`
+        puts ""
+
+        # running seed
+        if args['run_seed']
+          puts "Waiting for 10 seconds to be sure that docker instances are up and running..."
+          sleep(10)
+          puts ""
+          puts "Running seed (Installing WordPress)..."
+          puts `cd #{args["sitename"]}; gdev exec scripts/seed.sh`
+          puts ""
+        end
+
+        puts "Point your browser to https://#{args['sitename'].downcase}.test/wp-admin and log in"
+
+        # TODO: help for setting up stage and production
+        puts ""
+        puts "To create stage environment run:"
+        puts "$ flynn -c stage create #{args['sitename'].downcase} --remote=\"\""
+        puts ""
+        puts "Add mysql and redis resources for project:"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} resource add mysql"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} resource add redis"
+        puts ""
+        puts "Set environment variables:"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} env set WP_ENV=staging"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} env set WP_HOME=https://#{args['sitename'].downcase}.#{args['stage']}"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} env set WP_SITEURL=https://#{args['sitename'].downcase}.#{args['stage']}"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} env set SERVER_NAME=#{args['sitename'].downcase}.#{args['stage']}"
+        puts ""
+        puts "Set other environment variables as needed (eg. SMTP_HOST, SMTP_USER etc)"
+        puts "Refer to your (company) specific documentation for more settings to set up"
+        puts ""
+        puts "To deploy your project to stage cluster, go to project directory root and run:"
+        puts "$ docker build --pull -t devgeniem/#{args['sitename'].downcase} ."
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} docker push devgeniem/#{args['sitename'].downcase}"
+        puts ""
+        puts "Scale cluster as needed:"
+        puts "$ flynn -c stage -a #{args['sitename'].downcase} scale app=1"
+        puts ""
+        puts "More help with Flynn, visit: https://flynn.io/docs/basics"
+      else
+        puts "Directory "+args['sitename'].downcase+" exists, please use another sitename."
+        puts CREATE_HELP
+
+        exit
+      end
+
+
+    when "nodejs"
+      # setup nodejs project
+      puts "nodejs project not implemented yet."
+    when "silverbullet"
+      # setup silverbullet project
+      puts "silverbullet project not implemented yet."
+    else
+      puts "Type "+args['type']+" not supported."
+    end
+
+  end
+
+  # validate string (alphanumeric chars and -)
+  def validate_string(string)
+    !string.match(/\A[-a-zA-Z0-9]*\z/).nil?
+  end
+
+  def get_defaults(type)
+    defaults = Hash.new
+    if File.exist?(ENV['HOME']+'/.gdev/gdevconf.yml')
+      config = YAML.load(File.read(ENV['HOME']+"/.gdev/gdevconf.yml"))
+      defaults = config['create']['defaults'][type]
+    end
+    return defaults
+  end
+
+  def create_wizard()
+    # load default values
+    defaults = get_defaults('wordpress')
+    default_marker = "[default]"
+    project = Hash.new
+    puts "----------------------= Create new project =---------------------"
+
+    puts "Sitename (CamelCase alphanumeric string, dashes allowed):"
+    project['sitename']=gets.chomp
+    unless validate_string(project['sitename'])
+      puts "Sitename (CamelCase alphanumeric string, dashes allowed):"
+      project['sitename']=gets.chomp
+    end
+    puts ""
+    puts "Project type (wordpress"+default_marker+", nodejs, silverbullet):"
+    project['type']=gets.chomp
+    # wordpress specific settings
+    if ['','wordpress'].include?(project['type'])
+      # show selected default value
+      if project['type'] == ""
+        project['type']="wordpress"
+        puts "wordpress"
+      end
+      puts ""
+      puts "Components (dustpress):"
+      project['components']=gets.chomp
+      puts ""
+      if (defaults['theme'])
+        puts "Theme repository address ("+defaults['theme']+default_marker+"):"
+      else
+        puts "Theme repository address (git@domain/theme.git):"
+      end
+      project['theme']=gets.chomp
+      if project['theme'] == '' and defaults['theme']
+        project['theme']=defaults['theme']
+        puts defaults['theme']
+      else
+      end
+      puts ""
+    end
+    # run npm install in theme directory?
+    # TODO: default value
+    puts "Run npm install in theme directory after setup? (Y/N)"
+    npm_install=gets.chomp
+    if ['Y','y'].include?(npm_install)
+      project['npm_install']=true
+    else
+      project['npm_install']=false
+    end
+    puts ""
+    # run seed after setup?
+    puts "Run seed after installation? (Y/N)"
+    run_seed=gets.chomp
+    if ['Y','y'].include?(run_seed)
+      project['run_seed']=true
+    else
+      project['run_seed']=false
+    end
+    puts ""
+    # set stage cluster domain
+    if defaults['stage']
+      puts "Flynn stage cloud address ("+defaults['stage']+default_marker+"):"
+    else
+      puts "Flynn stage cloud address (stage.mydomain.com):"
+    end
+    project['stage']=gets.chomp
+    if project['stage'] == '' and defaults['stage']
+      project['stage']=defaults['stage']
+      puts defaults['stage']
+    else
+      puts '-- not set --'
+    end
+    puts ""
+    # set production cluster domain
+    if defaults['production']
+      puts "Flynn production cloud address ("+defaults['production']+default_marker+"):"
+    else
+      puts "Flynn production cloud address (production.mydomain.com):"
+    end
+    project['production']=gets.chomp
+    if project['production'] == '' and defaults['production']
+      project['production']=defaults['production']
+      puts defaults['production']
+    else
+      puts '-- not set --'
+    end
+    puts ""
+
+    puts "Project git repository, ssh or https (ssh://git@domain/my-app.git):"
+    project['git']=gets.chomp
+    
+    puts ""
+    puts "------------------------= Confirm input =------------------------"
+    project.each { |key,val|
+      puts key+": "+val.to_s
+    }
+    puts "-----= Enter Y to create project, something else to cancel =-----"
+    puts ""
+    confirm = gets.chomp
+    puts ""
+    if ['Y','y'].include?(confirm)
+      create_app(project)
+    else
+      puts "Cancelled."
+    end
+
+    exit
+  end
+
+  # H.T. https://gist.github.com/lpar/1032297
+  # Runs a specified shell command in a separate thread.
+  # If it exceeds the given timeout in seconds, kills it.
+  # Returns any output produced by the command (stdout or stderr) as a String.
+  # Uses select to wait up to the tick length (in seconds) between
+  # checks on the command's status
+  #
+  # If you've got a cleaner way of doing this, I'd be interested to see it.
+  # If you think you can do it with Ruby's Timeout module, think again.
+  #
+  # This has been modified to have smaller sleeps. It may struggle with
+  # commands that run for a very long time.
+  def run_with_timeout(command, timeout, tick)
+    output = ''
+    begin
+      # Start task in another thread, which spawns a process
+      stdin, stderrout, thread = Open3.popen2e(command)
+      # Get the pid of the spawned process
+      pid = thread[:pid]
+      start = Time.now
+
+      while (Time.now - start) < timeout and thread.alive?
+        # Wait up to `tick` seconds for output/error data
+        select([stderrout], nil, nil, tick)
+        # Try to read the data
+        begin
+          output << stderrout.read_nonblock(4096)
+        rescue IO::WaitReadable
+          # A read would block, so loop around for another select
+        rescue EOFError
+          # Command has completed, not really an error...
+          break
+        end
+      end
+      # Give Ruby time to clean up the other thread
+      sleep 0.1
+
+      if thread.alive?
+        # We need to kill the process, because killing the thread leaves
+        # the process alive but detached, annoyingly enough.
+        Process.kill("TERM", pid)
+        output = "Process timed out"
+      end
+    ensure
+      stdin.close if stdin
+      stderrout.close if stderrout
+    end
+    return output
   end
 
   # Cross-platform way of finding an executable in the $PATH.
