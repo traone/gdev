@@ -5,12 +5,11 @@
   vars:
     gdev_env_dir: /usr/local/gdev-env
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
-    machine_ip: 127.0.0.1
+
+    # This is alias for localhost loopback so that containers can connect to software running in osx ports
+    gdev_docker_host_ip: 10.254.254.254
 
   tasks:
-    - name: Give sudo password some time to load correctly
-      pause: seconds=5
-
     - name: Install Docker for Mac
       homebrew_cask: name=docker state=present
 
@@ -20,22 +19,14 @@
     - name: Install python
       homebrew: name=python state=present
 
+    - name: Check that pip is installed
+      stat: path=/usr/local/bin/pip
+      register: pip_installed
+
     - name: Install pip
       easy_install: name=pip state=latest
       become: yes
-      become_method: sudo
-
-    - name: Install unison-fsmonitor dependencies
-      pip: name=MacFSEvents state=present
-      become: yes
-      become_method: sudo
-
-    - name: Install unison-fsmonitor for mac (unox)
-      get_url:
-        url: https://raw.githubusercontent.com/hnsl/unox/4cf16fa20ec1f5b2fcafd7b78cac6dfedca18a86/unox.py
-        dest: /usr/local/bin/unison-fsmonitor
-        mode: 0755
-        checksum: sha256:cb49197eef7a19f12bd46c921a1e3a388f8f26e77307eb3f366d274003859201
+      when: not pip_installed.stat.exists
 
     - name: Check gdev-env directory permissions
       file:
@@ -58,7 +49,6 @@
         mode: 0755
       # If this was somehow root owned make sure it's not anymore
       become: yes
-      become_method: sudo
 
     - name: Symlink gdev bin to PATH
       file:
@@ -66,6 +56,27 @@
         dest: /usr/local/bin/gdev
         state: link
       tags: ['pre-install']
+
+    - name: Check that host ip looback is running
+      command: "ifconfig lo0 alias 10.254.254.254"
+      become: yes
+
+    - name: Ensure host ip looback after reboots
+      template:
+        src: templates/com.gdev.docker_ip_alias.plist.j2
+        dest: /Library/LaunchDaemons/com.gdev.docker_loopback_alias.plist
+        owner: root
+        group: wheel
+        mode: 0644
+      become: yes
+
+    - name: Add localunixsocket.local hostname in /etc/hosts
+      blockinfile:
+        dest: /etc/hosts
+        marker: "# {mark}: Gdev prevent docker for OSX from slowing in certain networks"
+        block: 127.0.0.1 localunixsocket.local
+      tags: [ 'hosts' ]
+      become: yes
 
     - name: Start docker for mac
       command: "open -a docker"
@@ -106,6 +117,7 @@
       file: path=/etc/resolver state=directory mode=0755
       become: yes
       become_method: sudo
+      tags: ['dns']
 
     - name: Delete resolver files to trigger dns change
       file:
@@ -114,14 +126,16 @@
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
 
     - name: Create dns resolver files at /etc/resolver/
       template:
-        src: "{{ gdev_env_dir }}/ansible/resolver-dev.conf.j2"
+        src: "templates/resolver-dev.conf.j2"
         dest: "/etc/resolver/{{item.domain}}"
         force: yes
       become: yes
       become_method: sudo
       with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
+        - { ip: "{{ gdev_docker_host_ip }}", domain: test }
+      tags: ['dns']
