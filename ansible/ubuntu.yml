@@ -5,13 +5,14 @@
   vars:
     gdev_env_dir: "/usr/local/gdev-env"
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
-    machine_ip: 10.254.254.254
+    machine_ip: 172.17.0.1
+    compose_version: 1.13.0
 
   tasks:
   
-    - name: lisataan gdev ip
+    #- name: lisataan gdev ip
     
-    - name: lisataan gdev ip osoitteistoon
+    #- name: lisataan gdev ip osoitteistoon
     
     - name: Make sure apt-transport-https is installed
       become: yes
@@ -48,21 +49,19 @@
       apt: name=docker-engine update_cache=yes state=latest
     
     - name: Install Unison
-      homebrew: name=unison state=present
-
-    - name: Install Docker-py
       become: yes
       become_method: sudo
-      pip:
-        name: docker-py
+      apt: name=unison state=present
+
+    - name: Install ruby
+      become: yes
+      become_method: sudo
+      apt: name=ruby state=present
         
     - name: Installing docker compose
       become: yes
       become_method: sudo
-      pip:
-        name: docker-compose
-        state: present
-      
+      shell: "curl -L https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose"
 
     - name: Create gdev directory
       file:
@@ -93,9 +92,6 @@
         append: yes
       become: yes
       become_method: sudo
-      
-    - name: Add user to docker group in session
-      command: "newgrp docker"
 
     - name: Make sure docker is running
       become: yes
@@ -104,23 +100,8 @@
         name: docker
         state: started
 
-
-    - name: "Check that we have /var/run/docker.sock socket"
-      wait_for:
-        path: /var/run/docker.sock
-        state: present
-        timeout: 20
-
-    - name: "Check that we have /var/run/docker.sock socket"
-      stat: path=/var/run/docker.sock
-      register: docker_socket
-
-    - name: Fail if no docker.sock
-      fail: msg="Check that docker is enabled! /var/run/docker.sock is not mounted :(..."
-      when: not docker_socket.stat.exists
-
     - name: Start gdev services
-      command: "{{ gdev_env_dir }}/bin/gdev service up"
+      shell: "sg docker -c '{{ gdev_env_dir }}/bin/gdev service up'"
 
     - name: Wait for signaler to create CA file
       wait_for:
@@ -136,19 +117,24 @@
       become: yes
       become_method: sudo
 
-    - name: Create dns resolver files at /etc/NetworkManager/dnsmasq.d/
+    - name: Ensure /etc/systemd/resolved.conf.d dir exists
+      become: yes
+      become_method: sudo
+      file: path=/etc/systemd/resolved.conf.d state=directory
+
+    - name: Create dns resolver files at /etc/systemd/resolved.conf.d/
       template:
-        src: "{{ gdev_env_dir }}/ansible/nm-dnsmasq-dev.conf.j2"
-        dest: "/etc/NetworkManager/dnsmasq.d/{{item.domain}}"
+        src: "{{ gdev_env_dir }}/ansible/ubuntu_resolvd.conf"
+        dest: "/etc/systemd/resolved.conf.d/{{item.domain}}.conf"
         force: yes
       become: yes
       become_method: sudo
       with_items:
         - { ip: "{{ machine_ip }}", domain: test }
 
-    - name: Restart network-manager
+    - name: Restart systemd-resolved
       service: 
-        name: network-manager
+        name: systemd-resolved
         state: restarted
       become: yes
       become_method: sudo

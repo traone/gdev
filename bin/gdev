@@ -141,13 +141,26 @@ HEREDOC
   # Updating is just running bootstrap again with newer bootstrap bin
   def update(args)
     if (args[0] == "dns")
-      system('ansible-playbook /usr/local/gdev-env/ansible/mac.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
+
+      if RUBY_PLATFORM.include? "linux"
+        system('ansible-playbook /usr/local/gdev-env/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
+      else
+        system('ansible-playbook /usr/local/gdev-env/ansible/mac.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
+      end
+
     elsif (args[0].nil?)
-      system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/bootstrap')
+
+      if RUBY_PLATFORM.include? "linux"
+        system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/ubuntu')
+      else
+        system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/bootstrap')
+      end
+
       # Rebuild and reload all services
       puts "Refreshing all gdev services..."
       service(['build nginx'])
       service(['reload'])
+
     else
       puts "Did you mean to run: $ gdev update ?"
     end
@@ -164,7 +177,13 @@ HEREDOC
       no_command_given = true
     end
     args.unshift("docker-compose", "-f /usr/local/gdev-env/docker/services.yml", "-p gdev")
-    box_ip="127.0.0.1"
+    
+    #If linux, set ip, otherwise assume user is on mac os x
+    if RUBY_PLATFORM.include? "linux"
+      box_ip="172.17.0.1"
+    else
+      box_ip="127.0.0.1"
+    end
     # Set system variables which we can use in our templates
     system({"BOX_IP" => box_ip},args.join(" "))
 
