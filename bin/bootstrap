@@ -111,6 +111,15 @@ else # Ansible needs to be at least 1.9
 fi
 echo -e "\n\n"
 
+## Install Docker-Sync
+echo 'Installing Docker-Sync...'
+if [[ $? != 0 ]] ; then
+    gem install -n /usr/local/bin docker-sync
+else
+    gem update docker-sync
+fi
+echo -e "\n\n"
+
 ## Check available disk space in gigabytes
 if free_disk_space 10; then
   echo "CHECK: You have at least 10gb available space."

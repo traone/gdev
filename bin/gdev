@@ -39,8 +39,8 @@ Commands:
 
 HEREDOC
 
-  PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start stop}
-  PROXY_MODIFIED=%w{up run help}
+  PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start}
+  PROXY_MODIFIED=%w{up run help stop}
   OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec sync create}
 
   CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
@@ -69,6 +69,14 @@ HEREDOC
     else
       puts MAIN_HELP_BANNER
     end
+  end
+
+  def stop(args)
+    # Stop Docker-Sync
+    system("docker-sync stop")
+
+    args.unshift("docker-compose")
+    system(args.join(" "))
   end
 
   def run(args)
@@ -135,6 +143,9 @@ HEREDOC
   end
 
   def up(args)
+    # Start Docker-Sync
+    system("docker-sync start")
+
     service(["up"])
 
     # Run startup scripts
