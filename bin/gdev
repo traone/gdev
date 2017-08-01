@@ -143,10 +143,10 @@ HEREDOC
   end
 
   def up(args)
+    service(["up"])
+
     # Start Docker-Sync
     system("docker-sync start")
-
-    service(["up"])
 
     # Run startup scripts
     before_up()
