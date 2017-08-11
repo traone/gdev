@@ -13,8 +13,9 @@
     - name: Install Docker for Mac
       homebrew_cask: name=docker state=present
 
-    - name: Install Unison
-      homebrew: name=unison state=present
+    # Commented out because of the new sync and it's probably not needed anymore. 11.8.2017 -Miika
+    # - name: Install Unison
+    #   homebrew: name=unison state=present
 
     - name: Install python
       homebrew: name=python state=present
@@ -92,7 +93,7 @@
       register: docker_socket
 
     - name: Fail if no docker.sock
-      fail: msg="Check that docker for mac is enabled! /var/run/docker.sock is not mounted :(..."
+      fail: msg="Check that Docker for Mac is enabled! /var/run/docker.sock is not mounted. :("
       when: not docker_socket.stat.exists
 
     - name: Start or reload gdev services

@@ -115,9 +115,9 @@ echo -e "\n\n"
 echo 'Installing Docker-Sync...'
 which -s docker-sync
 if [[ $? != 0 ]] ; then
-    gem install -n /usr/local/bin docker-sync
+    sudo gem install -n /usr/local/bin docker-sync
 else
-    gem update docker-sync
+    sudo gem update docker-sync
 fi
 echo -e "\n\n"
 
