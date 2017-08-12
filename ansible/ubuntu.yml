@@ -9,17 +9,13 @@
     compose_version: 1.13.0
 
   tasks:
-  
-    #- name: lisataan gdev ip
-    
-    #- name: lisataan gdev ip osoitteistoon
     
     - name: Make sure apt-transport-https is installed
       become: yes
       become_method: sudo
       apt:
         pkg: "apt-transport-https"
-        state: installed
+        state: present
 
     - name: Ensure the system can use the HTTPS transport for APT
       stat:
@@ -29,8 +25,13 @@
     - name: Install HTTPS transport for APT
       apt:
         pkg: apt-transport-https
-        state: installed
+        state: latest
       when: not apt_https_transport.stat.exists
+
+    - name: Install ruby
+      become: yes
+      become_method: sudo
+      apt: name=ruby state=present
 
     - name: Add Docker key
       sudo: true
@@ -47,17 +48,7 @@
       become: yes
       become_method: sudo
       apt: name=docker-engine update_cache=yes state=latest
-    
-    - name: Install Unison
-      become: yes
-      become_method: sudo
-      apt: name=unison state=present
 
-    - name: Install ruby
-      become: yes
-      become_method: sudo
-      apt: name=ruby state=present
-        
     - name: Installing docker compose
       become: yes
       become_method: sudo
