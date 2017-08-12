@@ -83,6 +83,8 @@ HEREDOC
     args.unshift("--force-recreate")
     args.unshift("up")
     args.unshift("docker-compose")
+
+    system(args.join(" "))    
   end
 
   def cleanup(args)
