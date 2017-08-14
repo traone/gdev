@@ -7,7 +7,7 @@
       become: yes
       become_method: sudo
       template:
-        src: "{{ gdev_env_dir }}/ansible/ubuntu_resolvd.conf"
+        src: "{{ gdev_env_dir }}/ansible/ubuntu/ubuntu_resolvd.conf"
         dest: "/etc/systemd/resolved.conf.d/{{item.domain}}.conf"
         force: yes
       with_items:

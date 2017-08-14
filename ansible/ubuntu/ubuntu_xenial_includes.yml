@@ -7,7 +7,7 @@
       become: yes
       become_method: sudo
       template:
-        src: "{{ gdev_env_dir }}/ansible/ubuntu_dnsmasq.conf"
+        src: "{{ gdev_env_dir }}/ansible/ubuntu/ubuntu_dnsmasq.conf"
         dest: "/etc/NetworkManager/dnsmasq.d/{{item.domain}}.conf"
         force: yes
       with_items:
