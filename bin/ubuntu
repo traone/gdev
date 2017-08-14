@@ -4,7 +4,7 @@ sudo apt-add-repository ppa:ansible/ansible -y
 sudo apt-get update
 
 #Install Ubuntu deps
-sudo apt install git ansible -y
+sudo apt install git curl ansible -y
 
 # This is fork from original
 REPO='devgeniem/gdev'

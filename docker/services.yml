@@ -18,7 +18,7 @@ services:
       # Mount self signed https certificates for testing environment
       - ${HOME}/.gdev/certs:/etc/nginx/certs:ro
     network_mode: "bridge"
-    # restart: always
+    #restart: always
   dnsmasq:
     image: andyshinn/dnsmasq
     ports:
