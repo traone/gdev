@@ -38,8 +38,8 @@ Commands:
 
 HEREDOC
 
-  PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start stop}
-  PROXY_MODIFIED=%w{up run help}
+  PROXY_UNMODIFIED_TO_COMPOSE=%w{build kill logs ps pull restart rm start}
+  PROXY_MODIFIED=%w{up run help stop}
   OTHER_COMMANDS=%w{wait reload cleanup machine update service status shell exec create}
 
   CREATE_HELP='Usage: $ gdev create --type=wordpress --components=dustpress --stage=stage.mydomain.com --production=cloud.mydomain.com --theme=ssh://git@domain:/theme.git --sitename=myapp --stage=stage.mydomain.com --production=production.mydomain.com --git=ssh://git@mydomain:/my-app.git'
@@ -68,6 +68,17 @@ HEREDOC
     else
       puts MAIN_HELP_BANNER
     end
+  end
+
+  def stop(args)
+
+    if RUBY_PLATFORM.include? "darwin"
+      # Stop Docker-Sync
+      system("docker-sync stop")
+    end
+
+    args.unshift("docker-compose")
+    system(args.join(" "))
   end
 
   def run(args)
@@ -122,6 +133,11 @@ HEREDOC
 
   def up(args)
     service(["up"])
+
+    if RUBY_PLATFORM.include? "darwin"
+      # Stop Docker-Sync
+      system("docker-sync start")
+    end
 
     args.insert(1, "-d")
     args.unshift("docker-compose")
@@ -338,6 +354,12 @@ HEREDOC
           "#{args['sitename']}/web/app/themes/#{themename}/package.json",
           "#{args['sitename']}/web/app/themes/#{themename}/style.css"
         ]
+
+        # Add one additional replace to the array.
+        if RUBY_PLATFORM.include? "darwin"
+          themename_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
+        end
+
         themename_file_names.each do |file_name|
           text = File.read(file_name)
           # remove dashes from namespace strings
