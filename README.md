@@ -2,17 +2,22 @@
 
 ## What is this for?
 
-Helper script for all your container related development needs. This is for locally developing containerized applications in Geniem.
+Gdev is a helper script for all your container related development needs. It's for locally developing containerized applications.
 
 ## Quick installation
 
-Install gdev dependencies and start development environment by running:
+Install gdev dependencies and start the development environment by running:
 
     $ curl -fsSL https://raw.githubusercontent.com/devgeniem/gdev/master/bin/bootstrap | bash
 
 If you're installing on a Ubuntu machine, run:
 
     $ curl -fsSL https://raw.githubusercontent.com/devgeniem/gdev/master/bin/ubuntu | bash
+
+When using linux and MacOS computers on a shared project and you have different docker-compose.yml files for each, linux users need to add an environment variable for gdev to be able to use the correct compose configuration. Add this to your chosen shell configuration (for example .bashrc or .zshrc).
+
+    $ # Export compose file for ubuntu
+    $ export COMPOSE_FILE="docker-compose-ubuntu.yml"
 
 ## Start project containers
 
@@ -160,6 +165,9 @@ $ gdev reload
 * [Nicholas Silva](https://github.com/silvamerica), creator.
 * [Onni Hakala](https://github.com/onnimonni), forked the gdev version.
 * [Ville Pietarinen](https://github.com/villepietarinen), initial sync and create commands, fixes and development.
+* [Otto Rautamaa](https://github.com/ironland), ubuntu fixes and development.
+* [Arttu Mäkipörhölä](https://github.com/godbone), ubuntu fixes and development.
+* [Miika Arponen](https://github.com/nomafin), docker sync fixes and development.
 
 ## Contributing
 
