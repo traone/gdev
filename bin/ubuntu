@@ -4,7 +4,7 @@ sudo apt-add-repository ppa:ansible/ansible -y
 sudo apt-get update
 
 #Install Ubuntu deps
-sudo apt install git ansible -y
+sudo apt install git curl ansible -y
 
 # This is fork from original
 REPO='devgeniem/gdev'
@@ -48,7 +48,7 @@ fi
 echo 'Handing Playbook to Ansible (will require your sudo password)...'
 echo -e "\n"
 # Continue with gdev setup
-ansible-playbook $GDEV_DIR/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass -vvvv
+ansible-playbook $GDEV_DIR/ansible/ubuntu/ubuntu.yml -i 127.0.0.1, --ask-become-pass -vvvv
 
 # Help user to debug usual problems
 echo "If this was your first time installing Gdev, please restart your system now to make sure all software gets installed correctly ."

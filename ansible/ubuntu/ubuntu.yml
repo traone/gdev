@@ -6,59 +6,40 @@
     gdev_env_dir: "/usr/local/gdev-env"
     gdev_user_files: "{{ansible_env.HOME}}/.gdev"
     machine_ip: 172.17.0.1
-    compose_version: 1.13.0
+    compose_version: 1.15.0
 
   tasks:
-  
-    #- name: lisataan gdev ip
-    
-    #- name: lisataan gdev ip osoitteistoon
-    
-    - name: Make sure apt-transport-https is installed
-      become: yes
-      become_method: sudo
-      apt:
-        pkg: "apt-transport-https"
-        state: installed
-
-    - name: Ensure the system can use the HTTPS transport for APT
-      stat:
-        path: /usr/lib/apt/methods/https
-      register: apt_https_transport
-
-    - name: Install HTTPS transport for APT
-      apt:
-        pkg: apt-transport-https
-        state: installed
-      when: not apt_https_transport.stat.exists
-
-    - name: Add Docker key
-      sudo: true
-      apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=58118E89F3A912897C070ADBF76221572C52609D
-
-    - name: Add Docker apt-repository
-      become: yes
-      become_method: sudo
-      apt_repository:
-        repo: deb https://apt.dockerproject.org/repo ubuntu-xenial main
-        state: present
-
-    - name: Install docker package
-      become: yes
-      become_method: sudo
-      apt: name=docker-engine update_cache=yes state=latest
-    
-    - name: Install Unison
-      become: yes
-      become_method: sudo
-      apt: name=unison state=present
 
     - name: Install ruby
       become: yes
       become_method: sudo
-      apt: name=ruby state=present
-        
-    - name: Installing docker compose
+      apt: 
+        name: ruby 
+        state: latest
+
+    - name: "Add Docker key"
+      become: yes
+      become_method: sudo
+      apt_key:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        state: present
+
+    - name: "Add Docker repository"
+      become: yes
+      become_method: sudo
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable"
+        state: present
+
+    - name: Install Docker
+      become: yes
+      become_method: sudo
+      apt: 
+        name: docker-ce
+        state: latest
+        update_cache: yes
+
+    - name: Install Docker Compose
       become: yes
       become_method: sudo
       shell: "curl -L https://github.com/docker/compose/releases/download/{{ compose_version }}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose"
@@ -85,7 +66,7 @@
         force: yes
       tags: ['pre-install']
       
-    - name: Adding user to docker group
+    - name: Add user to docker group
       user: 
         name: "{{ansible_env.USER}}"
         groups: docker
@@ -93,7 +74,7 @@
       become: yes
       become_method: sudo
 
-    - name: Make sure docker is running
+    - name: Start Docker if it is not running
       become: yes
       become_method: sudo
       service:
@@ -117,24 +98,5 @@
       become: yes
       become_method: sudo
 
-    - name: Ensure /etc/systemd/resolved.conf.d dir exists
-      become: yes
-      become_method: sudo
-      file: path=/etc/systemd/resolved.conf.d state=directory
-
-    - name: Create dns resolver files at /etc/systemd/resolved.conf.d/
-      template:
-        src: "{{ gdev_env_dir }}/ansible/ubuntu_resolvd.conf"
-        dest: "/etc/systemd/resolved.conf.d/{{item.domain}}.conf"
-        force: yes
-      become: yes
-      become_method: sudo
-      with_items:
-        - { ip: "{{ machine_ip }}", domain: test }
-
-    - name: Restart systemd-resolved
-      service: 
-        name: systemd-resolved
-        state: restarted
-      become: yes
-      become_method: sudo
+    - name: Include the rest of the tasks according to your Ubuntu version
+      include: "ubuntu_{{ansible_distribution_release}}_includes.yml"
