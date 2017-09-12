@@ -355,11 +355,6 @@ HEREDOC
           "#{args['sitename']}/web/app/themes/#{themename}/style.css"
         ]
 
-        # Add one additional replace to the array.
-        if RUBY_PLATFORM.include? "darwin"
-          themename_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
-        end
-
         themename_file_names.each do |file_name|
           text = File.read(file_name)
           # remove dashes from namespace strings
@@ -372,6 +367,10 @@ HEREDOC
         projectname_file_names = [
           "#{args['sitename']}/docker-compose.yml"
         ]
+        # Add one additional replace to the array.
+        if RUBY_PLATFORM.include? "darwin"
+          projectname_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
+        end
         projectname_file_names.each do |file_name|
           text = File.read(file_name)
           new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
