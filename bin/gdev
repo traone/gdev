@@ -366,6 +366,18 @@ HEREDOC
           new_contents = text.gsub(/THEMENAME/, "#{args['sitename'].tr('-','')}")
           File.open(file_name, "w") {|file| file.puts new_contents }
         end
+
+        # replace PROJECTNAME references 
+        puts "Replacing 'PROJECTNAME' strings with '#{args['sitename']}'..."
+        projectname_file_names = [
+          "#{args['sitename']}/docker-compose.yml"
+        ]
+        projectname_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+
         puts "Replacing 'themename-textdomain' strings from all project files with '#{args['sitename'].downcase}-td'..."
         textdomain_file_names = [
           "#{args['sitename']}/web/app/themes/#{themename}/lib/setup.php",
