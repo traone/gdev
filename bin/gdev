@@ -369,7 +369,7 @@ HEREDOC
         ]
         # Add one additional replace to the array.
         if RUBY_PLATFORM.include? "darwin"
-          themename_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
+          projectname_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
         end
         projectname_file_names.each do |file_name|
           text = File.read(file_name)
