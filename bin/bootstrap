@@ -92,6 +92,16 @@ else
 fi
 echo -e "\n\n"
 
+## Install or Update Ruby with Homebrew ##
+echo 'Installing or updating ruby with Homebrew...'
+if brew ls --versions myformula > /dev/null; then
+  brew upgrade ruby
+else
+  brew install ruby
+fi
+
+echo -e "\n\n"
+
 ## Install or Update Ansible ##
 echo 'Installing or Updating Ansible...'
 which -s ansible-playbook
@@ -115,9 +125,9 @@ echo -e "\n\n"
 echo 'Installing Docker-Sync...'
 which -s docker-sync
 if [[ $? != 0 ]] ; then
-    sudo gem install -n /usr/local/bin docker-sync
+    gem install -n /usr/local/bin docker-sync
 else
-    sudo gem update docker-sync
+    gem update docker-sync
 fi
 echo -e "\n\n"
 
