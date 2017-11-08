@@ -75,7 +75,10 @@
       blockinfile:
         dest: /etc/hosts
         marker: "# {mark}: Gdev prevent docker for OSX from slowing in certain networks"
-        block: 127.0.0.1 localunixsocket.local
+        block: |
+          127.0.0.1 localunixsocket
+          127.0.0.1 localunixsocket.lan
+          127.0.0.1 localunixsocket.local
       tags: [ 'hosts' ]
       become: yes
 

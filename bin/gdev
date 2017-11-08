@@ -71,8 +71,16 @@ HEREDOC
   end
 
   def stop(args)
+<<<<<<< HEAD
     # Stop Docker-Sync
     system("docker-sync stop")
+=======
+
+    if RUBY_PLATFORM.include? "darwin"
+      # Stop Docker-Sync
+      system("docker-sync stop")
+    end
+>>>>>>> master
 
     args.unshift("docker-compose")
     system(args.join(" "))
@@ -92,7 +100,11 @@ HEREDOC
     args.unshift("up")
     args.unshift("docker-compose")
 
+<<<<<<< HEAD
     system(args.join(" "))
+=======
+    system(args.join(" "))    
+>>>>>>> master
   end
 
   def cleanup(args)
@@ -131,8 +143,15 @@ HEREDOC
   def up(args)
     service(["up"])
 
+<<<<<<< HEAD
     # Start Docker-Sync
     system("docker-sync start")
+=======
+    if RUBY_PLATFORM.include? "darwin"
+      # Stop Docker-Sync
+      system("docker-sync start")
+    end
+>>>>>>> master
 
     args.insert(1, "-d")
     args.unshift("docker-compose")
@@ -160,12 +179,26 @@ HEREDOC
 
   # Updating is just running bootstrap again with newer bootstrap bin
   def update(args)
-    if (args[0].nil?)
-      system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/bootstrap')
+    if (args[0] == "dns")
+
+      if RUBY_PLATFORM.include? "linux"
+        system('ansible-playbook /usr/local/gdev-env/ansible/ubuntu.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
+      else
+        system('ansible-playbook /usr/local/gdev-env/ansible/mac.yml -i 127.0.0.1, --ask-become-pass --verbose --tags=dns')
+      end
+
+    elsif (args[0].nil?)
+
+      if RUBY_PLATFORM.include? "linux"
+        system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/ubuntu')
+      else
+        system('cd /usr/local/gdev-env && git reset HEAD --hard && git pull origin HEAD && bin/bootstrap')
+      end
       # Rebuild and reload all services
       puts "Refreshing all gdev services..."
       service(['build nginx'])
       service(['reload'])
+
     else
       puts "Did you mean to run: $ gdev update ?"
     end
@@ -182,7 +215,13 @@ HEREDOC
       no_command_given = true
     end
     args.unshift("docker-compose", "-f /usr/local/gdev-env/docker/services.yml", "-p gdev")
-    box_ip="10.254.254.254"
+    
+    #If linux, set ip, otherwise assume user is on mac os x
+    if RUBY_PLATFORM.include? "linux"
+      box_ip="172.17.0.1"
+    else
+      box_ip="10.254.254.254"
+    end
     # Set system variables which we can use in our templates
     system({"BOX_IP" => box_ip},args.join(" "))
 
@@ -198,6 +237,7 @@ HEREDOC
     system("docker-compose ps")
   end
 
+<<<<<<< HEAD
   def get_docker_host_port(container_name)
     # Get the data container id
     data_docker_id=`docker-compose ps -q #{container_name}`
@@ -223,6 +263,8 @@ HEREDOC
     RUBY_PLATFORM.include? 'darwin'
   end
 
+=======
+>>>>>>> master
   # Create new project command (validate arguments and start creating app or use wizard)
   def create(args)
     # validate arguments
@@ -355,12 +397,29 @@ HEREDOC
           "#{args['sitename']}/web/app/themes/#{themename}/package.json",
           "#{args['sitename']}/web/app/themes/#{themename}/style.css"
         ]
+
         themename_file_names.each do |file_name|
           text = File.read(file_name)
           # remove dashes from namespace strings
           new_contents = text.gsub(/THEMENAME/, "#{args['sitename'].tr('-','')}")
           File.open(file_name, "w") {|file| file.puts new_contents }
         end
+
+        # replace PROJECTNAME references 
+        puts "Replacing 'PROJECTNAME' strings with '#{args['sitename']}'..."
+        projectname_file_names = [
+          "#{args['sitename']}/docker-compose.yml"
+        ]
+        # Add one additional replace to the array.
+        if RUBY_PLATFORM.include? "darwin"
+          projectname_file_names.insert(-1, "#{args['sitename']}/docker-sync.yml")
+        end
+        projectname_file_names.each do |file_name|
+          text = File.read(file_name)
+          new_contents = text.gsub(/PROJECTNAME/, "#{args['sitename']}")
+          File.open(file_name, "w") {|file| file.puts new_contents }
+        end
+
         puts "Replacing 'themename-textdomain' strings from all project files with '#{args['sitename'].downcase}-td'..."
         textdomain_file_names = [
           "#{args['sitename']}/web/app/themes/#{themename}/lib/setup.php",
@@ -597,70 +656,6 @@ HEREDOC
     end
 
     exit
-  end
-
-  # H.T. https://gist.github.com/lpar/1032297
-  # Runs a specified shell command in a separate thread.
-  # If it exceeds the given timeout in seconds, kills it.
-  # Returns any output produced by the command (stdout or stderr) as a String.
-  # Uses select to wait up to the tick length (in seconds) between
-  # checks on the command's status
-  #
-  # If you've got a cleaner way of doing this, I'd be interested to see it.
-  # If you think you can do it with Ruby's Timeout module, think again.
-  #
-  # This has been modified to have smaller sleeps. It may struggle with
-  # commands that run for a very long time.
-  def run_with_timeout(command, timeout, tick)
-    output = ''
-    begin
-      # Start task in another thread, which spawns a process
-      stdin, stderrout, thread = Open3.popen2e(command)
-      # Get the pid of the spawned process
-      pid = thread[:pid]
-      start = Time.now
-
-      while (Time.now - start) < timeout and thread.alive?
-        # Wait up to `tick` seconds for output/error data
-        select([stderrout], nil, nil, tick)
-        # Try to read the data
-        begin
-          output << stderrout.read_nonblock(4096)
-        rescue IO::WaitReadable
-          # A read would block, so loop around for another select
-        rescue EOFError
-          # Command has completed, not really an error...
-          break
-        end
-      end
-      # Give Ruby time to clean up the other thread
-      sleep 0.1
-
-      if thread.alive?
-        # We need to kill the process, because killing the thread leaves
-        # the process alive but detached, annoyingly enough.
-        Process.kill("TERM", pid)
-        output = "Process timed out"
-      end
-    ensure
-      stdin.close if stdin
-      stderrout.close if stderrout
-    end
-    return output
-  end
-
-  # Cross-platform way of finding an executable in the $PATH.
-  #
-  #   which('ruby') #=> /usr/bin/ruby
-  def command_exists(cmd)
-    exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
-    ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
-      exts.each { |ext|
-        exe = File.join(path, "#{cmd}#{ext}")
-        return exe if File.executable?(exe) && !File.directory?(exe)
-      }
-    end
-    return nil
   end
 end
 
