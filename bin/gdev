@@ -71,16 +71,8 @@ HEREDOC
   end
 
   def stop(args)
-<<<<<<< HEAD
     # Stop Docker-Sync
     system("docker-sync stop")
-=======
-
-    if RUBY_PLATFORM.include? "darwin"
-      # Stop Docker-Sync
-      system("docker-sync stop")
-    end
->>>>>>> master
 
     args.unshift("docker-compose")
     system(args.join(" "))
@@ -100,11 +92,8 @@ HEREDOC
     args.unshift("up")
     args.unshift("docker-compose")
 
-<<<<<<< HEAD
     system(args.join(" "))
-=======
-    system(args.join(" "))    
->>>>>>> master
+
   end
 
   def cleanup(args)
@@ -143,15 +132,8 @@ HEREDOC
   def up(args)
     service(["up"])
 
-<<<<<<< HEAD
     # Start Docker-Sync
     system("docker-sync start")
-=======
-    if RUBY_PLATFORM.include? "darwin"
-      # Stop Docker-Sync
-      system("docker-sync start")
-    end
->>>>>>> master
 
     args.insert(1, "-d")
     args.unshift("docker-compose")
@@ -237,7 +219,6 @@ HEREDOC
     system("docker-compose ps")
   end
 
-<<<<<<< HEAD
   def get_docker_host_port(container_name)
     # Get the data container id
     data_docker_id=`docker-compose ps -q #{container_name}`
@@ -263,8 +244,6 @@ HEREDOC
     RUBY_PLATFORM.include? 'darwin'
   end
 
-=======
->>>>>>> master
   # Create new project command (validate arguments and start creating app or use wizard)
   def create(args)
     # validate arguments
