@@ -71,8 +71,10 @@ HEREDOC
   end
 
   def stop(args)
-    # Stop Docker-Sync
-    system("docker-sync stop")
+    if RUBY_PLATFORM.include? "darwin"
+      # Stop Docker-Sync
+      system("docker-sync stop")
+    end
 
     args.unshift("docker-compose")
     system(args.join(" "))
@@ -131,9 +133,10 @@ HEREDOC
 
   def up(args)
     service(["up"])
-
-    # Start Docker-Sync
-    system("docker-sync start")
+    if RUBY_PLATFORM.include? "darwin"
+      # Start Docker-Sync
+      system("docker-sync start")
+    end
 
     args.insert(1, "-d")
     args.unshift("docker-compose")
