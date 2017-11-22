@@ -347,7 +347,6 @@ HEREDOC
           "#{args['sitename']}/.drone.yml", 
           "#{args['sitename']}/config/application.php",
           "#{args['sitename']}/docker-compose.yml",
-          "#{args['sitename']}/docker-sync.yml",
           "#{args['sitename']}/web/app/themes/#{themename}/lib/extras.php",
           "#{args['sitename']}/web/app/themes/#{themename}/lib/images.php",
           "#{args['sitename']}/web/app/themes/#{themename}/lib/setup.php",
