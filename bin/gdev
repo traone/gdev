@@ -222,31 +222,6 @@ HEREDOC
     system("docker-compose ps")
   end
 
-  def get_docker_host_port(container_name)
-    # Get the data container id
-    data_docker_id=`docker-compose ps -q #{container_name}`
-    if $?.success? and not data_docker_id.empty?
-        # Get the data container port
-        data_docker_ports = `docker inspect --format='{{json .NetworkSettings.Ports}}' #{data_docker_id}`
-        if $?.success? and data_docker_ports
-            begin
-                data_docker_ports_obj = JSON.parse(data_docker_ports)
-                data_docker_host_port = data_docker_ports_obj["5000/tcp"][0]['HostPort']
-                port = data_docker_host_port
-                return port
-            rescue JSON::ParserError
-                # Container wasn't yet started
-                return nil
-            end
-        end
-    end
-    return nil
-  end
-
-  def is_osx?
-    RUBY_PLATFORM.include? 'darwin'
-  end
-
   # Create new project command (validate arguments and start creating app or use wizard)
   def create(args)
     # validate arguments
