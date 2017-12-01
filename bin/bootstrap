@@ -92,6 +92,16 @@ else
 fi
 echo -e "\n\n"
 
+## Install or Update Ruby with Homebrew ##
+echo 'Installing or updating ruby with Homebrew...'
+if brew ls --versions myformula > /dev/null; then
+  brew upgrade ruby
+else
+  brew install ruby
+fi
+
+echo -e "\n\n"
+
 ## Install or Update Ansible ##
 echo 'Installing or Updating Ansible...'
 which -s ansible-playbook
@@ -108,6 +118,16 @@ else # Ansible needs to be at least 1.9
   else
     echo "Ansible version is $ANSIBLE_VERSION. Update not needed..."
   fi
+fi
+echo -e "\n\n"
+
+## Install Docker-Sync
+echo 'Installing Docker-Sync...'
+which -s docker-sync
+if [[ $? != 0 ]] ; then
+    gem install -n /usr/local/bin docker-sync
+else
+    gem update docker-sync
 fi
 echo -e "\n\n"
 
