@@ -1,0 +1,50 @@
+.:RUBY:.
+require "yaml"
+
+class Create
+    
+    class << self
+        
+        def start(args)
+            cfg_file = args.length > 0 ? args[0] : "config.yaml"
+
+            if (File.file?(cfg_file))
+                puts "Config file found, generating project.."
+                config = YAML.load(File.read(cfg_file));
+            else
+                puts "Config file not found, starting a wizard.."
+                config = { }
+            end
+
+            self.handle_args(config)
+        end
+
+        def handle_args(config)
+            actions = {
+                "project_name" => -> (name) {
+                    puts "Project name found"
+                },
+                "test" => -> (test) {
+                    puts "Test"
+                }
+            }
+
+            actions.each do | command, action |
+                if (config.key?(command))
+                    action.call(config[command])
+                else
+                    beautify = command.capitalize.sub("_", " ")
+                    puts "#{beautify} not set."
+                    puts "Give #{beautify}:"
+                    argument = gets
+                    action.call(argument)
+                end
+            end
+        end
+
+    end
+end
+
+Create.start(args)
+
+.:/RUBY:.
