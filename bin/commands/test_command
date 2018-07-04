@@ -1,6 +1,0 @@
-.:RUBY:.
-puts "TESTATAAAAN"
-puts args
-.:/RUBY:.
-ls
-ls

@@ -1,4 +1,5 @@
 .:RUBY:.
+
 require "yaml"
 
 class Create
@@ -22,10 +23,16 @@ class Create
         def handle_args(config)
             actions = {
                 "project_name" => -> (name) {
-                    puts "Project name found"
-                },
-                "test" => -> (test) {
-                    puts "Test"
+                    raise ArgumentError, "Project name can't contain whitespaces" unless !name.include?(" ")
+                    puts "Project name set"
+                    puts "Cloning WP project to project folder.."
+                    system("git clone git@github.com:devgeniem/wp-project.git #{name}")
+                    puts "Removing .git folder from project folder.."
+                    system("rm -rf #{name}/.git")
+                    puts "Cloning dustpress-theme to project folder.."
+                    system("git clone git@github.com:devgeniem/the-dustpress-theme.git #{name}/web/app/themes/#{name}")
+                    puts "Removing .git folder from theme folder.."
+                    system("rm -rf #{name}/web/app/themes/#{name}/.git")
                 }
             }
 
@@ -37,6 +44,7 @@ class Create
                     puts "#{beautify} not set."
                     puts "Give #{beautify}:"
                     argument = gets
+                    argument = argument.strip
                     action.call(argument)
                 end
             end
