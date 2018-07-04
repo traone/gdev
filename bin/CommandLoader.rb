@@ -1,11 +1,11 @@
-require "./CommandHandler.rb"
+require "#{File.dirname(__FILE__)}/CommandHandler.rb"
 
 class CommandLoader
-    COMMAND_FOLDER = "./commands/"
+    COMMAND_FOLDER = "#{File.dirname(__FILE__)}/commands/"
     def self.load(args)
         current_command = args.shift
         all_commands = Dir["#{COMMAND_FOLDER}*"]
-            .reject {|f| File.directory? f}
+            .reject{ |f| File.directory? f}
             .map{ |f| File.basename f }
         
         if all_commands.include? current_command then

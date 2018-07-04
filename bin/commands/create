@@ -34,6 +34,11 @@ class Create
                     puts "Removing .git folder from theme folder.."
                     system("rm -rf #{name}/web/app/themes/#{name}/.git")
                 }
+                # TODO: 
+                # Bucketit
+                # Kontena
+                # Repo
+                # Wizardilla yaml tiedoston luominen
             }
 
             actions.each do | command, action |

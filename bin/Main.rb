@@ -1,6 +1,7 @@
-require "./CommandLoader.rb"
+require "#{File.dirname(__FILE__)}/CommandLoader.rb"
 
 class Main
+    MAIN_LOCATION = File.dirname(__FILE__)
     def initialize(args)
         puts "Welcome to GDEV 2.0!"
         CommandLoader.load(args)
