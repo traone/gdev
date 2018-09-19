@@ -11,7 +11,8 @@ class CommandLoader
         if all_commands.include? current_command then
             CommandHandler.new("#{COMMAND_FOLDER}#{current_command}", args)
         else
-            puts "Error! Command #{current_command} not found! Use help."
+            puts "Using old gdev.."
+            system("gdev #{current_command}")
         end
     end
 end

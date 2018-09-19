@@ -21,19 +21,93 @@ class Create
         end
 
         def handle_args(config)
+            globals = {
+                "name" => "",
+                "session_db" => 3,
+            }
             actions = {
                 "project_name" => -> (name) {
                     raise ArgumentError, "Project name can't contain whitespaces" unless !name.include?(" ")
                     puts "Project name set"
+                    globals["name"] = name
+=begin
+
                     puts "Cloning WP project to project folder.."
                     system("git clone git@github.com:devgeniem/wp-project.git #{name}")
+                    
                     puts "Removing .git folder from project folder.."
                     system("rm -rf #{name}/.git")
+                    
                     puts "Cloning dustpress-theme to project folder.."
                     system("git clone git@github.com:devgeniem/the-dustpress-theme.git #{name}/web/app/themes/#{name}")
+
                     puts "Removing .git folder from theme folder.."
                     system("rm -rf #{name}/web/app/themes/#{name}/.git")
+=end
+
+                    # replace all name (namespace) references from all files from this project to your project name
+                    puts "Replacing 'name' strings from all project files with '#{name}'..."
+
+                    name_file_names = {
+                        "#{name}/docker-compose.yml" => {
+                            "replace" => "THEMENAME",
+                            "with"    => name
+                        },
+                        "#{name}/docker-compose-ubuntu.yml" => {
+                            "replace" => "THEMENAME",
+                            "with"    => name
+                        },
+                        "#{name}/docker-compose.yml" => {
+                            "replace" => "wordpress.test",
+                            "with"    => "#{name}.test"
+                        },
+                        "#{name}/docker-compose-ubuntu.yml" => {
+                            "replace" => "wordpress.test",
+                            "with"    => "#{name}.test"
+                        },
+                        "#{name}/kontena-stage.yml" => {
+                            "replace" => "asiakas",
+                            "with"    => name
+                        },
+                        "#{name}/kontena-stage.yml" => {
+                            "replace" => "Asiakas",
+                            "with"    => name.capitalize
+                        },
+
+                    }
+
+                    name_file_names.each do |file_name, data|
+                        text = File.read(file_name) 
+                        # remove dashes from namespace strings
+                        new_contents = text.gsub(/#{data["replace"]}/, "#{data["with"].tr('-','')}")
+                        File.open(file_name, "w") {|file| file.puts new_contents }
+                    end
+                    
+                    
+                },
+                "php_session_redis_db" => -> (session_db) {
+                    session_db = session_db.to_i
+                    raise ArgumentError, "Redis id has to be numeric!" unless session_db.is_a? Integer
+                    globals["session_db"] = session_db
+
+                    name_file_names = {
+                        "#{name}/kontena-stage.yml" => {
+                            "replace" => "PHP_SESSION_REDIS_DB: 2",
+                            "with"    => name
+                        },
+                        "#{name}/kontena-production.yml" => {
+                            "replace" => "PHP_SESSION_REDIS_DB: 2",
+                            "with"    => name
+                        },
+                    }
+
+                    puts "Replacing redis session db..
+                    file_name = "#{globals["name"]}/kontena-stage.yml"
+                    text = File.read(file_name)
+                    new_contents = text.gsub(//, "PHP_SESSION_REDIS_DB: #{session_db}")
+                    File.open(file_name, "w") {|file| file.puts new_contents }
                 }
+                    
                 # TODO: 
                 # Bucketit
                 # Kontena
