@@ -20,11 +20,27 @@ class Create
             self.handle_args(config)
         end
 
+        def get_defaults(type)
+            defaults = Hash.new
+            file_name = ENV['HOME']+'/.gdev/gdevconf.yml'
+            if File.exist?(file_name)
+                config = YAML.load(File.read(file_name))
+                puts config
+                defaults = config['create']['defaults'][type]
+            else
+                puts "Could not read default file!"
+            end
+            return defaults
+        end
+
         def handle_args(config)
             globals = {
                 "name" => "",
                 "session_db" => 3,
             }
+
+            defaults = get_defaults("wordpress")
+
             actions = {
                 "project_name" => -> (name) {
                     raise ArgumentError, "Project name can't contain whitespaces" unless !name.include?(" ")
@@ -50,27 +66,27 @@ class Create
 
                     name_file_names = {
                         "#{name}/docker-compose.yml" => {
-                            "replace" => "THEMENAME",
+                            "replace" => /THEMENAME/,
                             "with"    => name
                         },
                         "#{name}/docker-compose-ubuntu.yml" => {
-                            "replace" => "THEMENAME",
+                            "replace" => /THEMENAME/,
                             "with"    => name
                         },
                         "#{name}/docker-compose.yml" => {
-                            "replace" => "wordpress.test",
+                            "replace" => /wordpress.test/,
                             "with"    => "#{name}.test"
                         },
                         "#{name}/docker-compose-ubuntu.yml" => {
-                            "replace" => "wordpress.test",
+                            "replace" => /wordpress.test/,
                             "with"    => "#{name}.test"
                         },
                         "#{name}/kontena-stage.yml" => {
-                            "replace" => "asiakas",
+                            "replace" => /asiakas/,
                             "with"    => name
                         },
                         "#{name}/kontena-stage.yml" => {
-                            "replace" => "Asiakas",
+                            "replace" => /Asiakas/,
                             "with"    => name.capitalize
                         },
 
@@ -79,7 +95,7 @@ class Create
                     name_file_names.each do |file_name, data|
                         text = File.read(file_name) 
                         # remove dashes from namespace strings
-                        new_contents = text.gsub(/#{data["replace"]}/, "#{data["with"].tr('-','')}")
+                        new_contents = text.gsub(data["replace"], "#{data["with"].tr('-','')}")
                         File.open(file_name, "w") {|file| file.puts new_contents }
                     end
                     
@@ -89,25 +105,53 @@ class Create
                     session_db = session_db.to_i
                     raise ArgumentError, "Redis id has to be numeric!" unless session_db.is_a? Integer
                     globals["session_db"] = session_db
-
                     name_file_names = {
-                        "#{name}/kontena-stage.yml" => {
-                            "replace" => "PHP_SESSION_REDIS_DB: 2",
-                            "with"    => name
+                        "#{globals["name"]}/kontena-stage.yml" => {
+                            "replace" => /PHP_SESSION_REDIS_DB: \d/,
+                            "with"    => "PHP_SESSION_REDIS_DB: #{session_db}"
                         },
-                        "#{name}/kontena-production.yml" => {
-                            "replace" => "PHP_SESSION_REDIS_DB: 2",
-                            "with"    => name
+                        "#{globals["name"]}/kontena-production.yml" => {
+                            "replace" => /PHP_SESSION_REDIS_DB: \d/,
+                            "with"    => "PHP_SESSION_REDIS_DB: #{session_db}"
                         },
                     }
 
-                    puts "Replacing redis session db..
-                    file_name = "#{globals["name"]}/kontena-stage.yml"
-                    text = File.read(file_name)
-                    new_contents = text.gsub(//, "PHP_SESSION_REDIS_DB: #{session_db}")
-                    File.open(file_name, "w") {|file| file.puts new_contents }
-                }
-                    
+                    puts "Replacing redis session db.."
+                    name_file_names.each do |file_name, data|
+                        text = File.read(file_name)
+                        new_contents = text.gsub(data["replace"], data["with"])
+                        File.open(file_name, "w") {|file| file.puts new_contents }
+                    end
+                }, 
+                "add_default_repositories" => -> (yesno) {
+                    noes = [
+                        "n",
+                        "no",
+                        "NO",
+                        "N"
+                    ]
+                    if yesno.empty? || ( noes.include? yesno )
+                        return
+                    else
+                        repositories = defaults["extra_repositories"]
+                        puts "Adding repositories.."
+                        repositories.each do | repository |
+                            repository_cmd = "composer config #{repository}"
+                            puts "cd #{globals["name"]} && #{repository_cmd}"
+                            system("cd #{globals["name"]} && #{repository_cmd}")
+                        end
+                        packages = defaults["extra_packages"]
+                        puts "Requiring packages.."
+                        packages.each do | package |
+                            require_cmd = "composer require #{package}"
+                            puts "cd #{globals["name"]} && #{require_cmd}"
+                            system("cd #{globals["name"]} && #{require_cmd}")
+                        end
+                        puts "Running composer install.."
+                        system("cd #{globals["name"]} && composer install")
+                    end
+                },
+                  
                 # TODO: 
                 # Bucketit
                 # Kontena
