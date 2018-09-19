@@ -93,10 +93,18 @@ class Create
                             "with"    => "#{name}.test"
                         },
                         "#{name}/kontena-stage.yml" => {
-                            "replace" => /asiakas/,
+                            "replace" => "asiakas",
                             "with"    => name
                         },
                         "#{name}/kontena-stage.yml" => {
+                            "replace" => /Asiakas/,
+                            "with"    => name.capitalize
+                        },
+                        "#{name}/kontena-production.yml" => {
+                            "replace" => "asiakas",
+                            "with"    => name
+                        },
+                        "#{name}/kontena-production.yml" => {
                             "replace" => /Asiakas/,
                             "with"    => name.capitalize
                         },
@@ -105,9 +113,12 @@ class Create
 
                     name_file_names.each do |file_name, data|
                         text = File.read(file_name) 
+                        puts text
                         # remove dashes from namespace strings
                         new_contents = text.gsub(data["replace"], "#{data["with"].tr('-','')}")
-                        File.open(file_name, "w") {|file| file.puts new_contents }
+                        File.open(file_name, "w") { | file | 
+                            file.puts new_contents 
+                        }
                     end
                     
                     
@@ -178,9 +189,9 @@ class Create
                             "define( 'BLOG_ID_CURRENT_SITE', 1 );"
                         ]
                         
-                        open('myfile.out', 'a') { |f|
+                        open("#{setup_file}", 'a') { |f|
                             multisite_content.each do | row |
-                                f.puts row
+                                f.puts("#{row}\n")
                             end
                         }
 
