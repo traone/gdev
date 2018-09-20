@@ -182,3 +182,23 @@ $ gdev reload
 `gdev` is available under the MIT license. See the LICENSE file for more info.
 
 Copyright 2017 Geniem Oy.
+
+
+# gdev v2.0
+
+## Install Google Cloud SDK
+
+( https://cloud.google.com/sdk/install )
+
+## Authenticate to goole container registry.
+```
+$ gcloud auth configure-docker
+```
+## add google sdk to path
+
+/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin
+
+## Install docker-credential-gcr
+```
+gcloud components install docker-credential-gcr
+```

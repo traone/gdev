@@ -50,6 +50,8 @@ class Create
             globals = {
                 "name" => "",
                 "session_db" => 3,
+                "create_buckets" => false,
+                "is_multisite" => false
             }
 
             defaults = get_defaults("wordpress")
@@ -168,6 +170,7 @@ class Create
                 },
                 "is_multisite" => -> (yesno) {
                     if is_yes(yesno)
+                        globals["is_multisite"] = true
                         system("cd #{globals["name"]} && composer require humanmade/mercator:dev-master")
                         theme_root = "#{globals["name"]}/web/app/themes/#{globals["name"]}"
                         setup_file = "#{theme_root}/lib/Setup.php"
@@ -196,10 +199,77 @@ class Create
 
                     end
 
+                },
+                "create_buckets" => -> (yesno) {
+                    if is_yes(yesno)
+                        globals["create_buckets"] = true
+                        puts "Login to Google Cloud.."
+                        system("gcloud auth login")
+
+                        puts("Creating service accounts..")
+                        #system("gcloud config set project #{defaults["service_accounts"]["dev"]}")
+                        #system("gcloud iam service-accounts create #{globals["name"]}-development --display-name \"#{globals["name"]} development\"")
+                        system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
+                        system("gcloud iam service-accounts create #{globals["name"]}-stage --display-name \"#{globals["name"]} stage\"")
+                        system("gcloud config set project #{defaults["service_accounts"]["production"]}")
+                        system("gcloud iam service-accounts create #{globals["name"]}-production --display-name \"#{globals["name"]} production\"")
+                        
+                        puts("Creating buckets..")
+                        #system("gsutil mb -l eu -p #{defaults["service_accounts"]["dev"]} gs://#{globals["name"]}-dev")
+                        system("gsutil mb -l eu -p #{defaults["service_accounts"]["stage"]} gs://#{globals["name"]}-stage")
+                        system("gsutil mb -l eu -p #{defaults["service_accounts"]["production"]} gs://#{globals["name"]}-production")
+                        
+                        puts("Settings bucket permissions..")
+                        #system("gsutil acl ch -u #{globals["name"]}-dev@#{defaults["service_accounts"]["dev"]}.iam.gserviceaccount.com:W gs://#{globals["name"]}-dev")
+                        system("gsutil acl ch -u #{globals["name"]}-stage@#{defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com:W gs://#{globals["name"]}-stage")
+                        system("gsutil acl ch -u #{globals["name"]}-production@#{defaults["service_accounts"]["production"]}.iam.gserviceaccount.com:W gs://#{globals["name"]}-production")
+
+                        puts("Creating keys for service accounts..")
+                        #system("gcloud iam service-accounts keys create #{globals["name"]}-dev.json --iam-account #{globals["name"]}-dev@#{defaults["service_accounts"]["dev"]}.iam.gserviceaccount.com")
+                        system("gcloud iam service-accounts keys create #{globals["name"]}-stage.json --iam-account #{globals["name"]}-stage@#{defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com")
+                        system("gcloud iam service-accounts keys create #{globals["name"]}-production.json --iam-account #{globals["name"]}-production@#{defaults["service_accounts"]["production"]}.iam.gserviceaccount.com")                        
+                        #system("cat #{globals["name"]}-dev.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-dev.min.json")
+                        system("cat #{globals["name"]}-stage.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-stage.min.json")
+                        system("cat #{globals["name"]}-production.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-production.min.json")
+                    end
+                },
+                "install_kontena_stacks" => -> (yesno) {
+                    if is_yes(yesno)
+                        puts "Building initial images.."
+                        #system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage .")
+                        #system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest .")
+
+                        puts "Pushing initial images.."
+                        system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
+                        #system("docker push eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage")
+                        system("gcloud config set project #{defaults["service_accounts"]["production"]}")
+                        #system("docker push eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest")
+
+                        puts "Login to Kontena.."
+                        system("kontena cloud login")
+
+                        puts "Selecting stage platform.."
+                        system("kontena cloud platform use geniem/stage")
+                        puts "Installing stage stack.."
+                        stage_stack_cmd = "kontena stack install kontena-stage.yml"
+                        system("cd #{globals["name"]} && #{stage_stack_cmd}")
+                        if globals["create_buckets"] == true
+                            puts "Setting stage GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
+                            system("kontena vault write #{globals["name"]}-google-cloud-storage-access-key \"$(cat #{globals["name"]}-stage.min.json)\"")
+                        end
+                        
+                        puts "Selecting production platform.."
+                        system("kontena cloud platform use geniem/production")
+                        puts "Installing production stack.."
+                        production_stack_cmd = "kontena stack install kontena-production.yml"
+                        system("cd #{globals["name"]} && #{production_stack_cmd}")                        
+                        if globals["create_buckets"] == true
+                            puts "Setting production GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
+                            system("kontena vault write #{globals["name"]}-google-cloud-storage-access-key \"$(cat #{globals["name"]}-production.min.json)\"")
+                        end
+                    end
                 }
                 # TODO:
-                # Bucketit
-                # Kontena
                 # Repo
                 # Wizardilla yaml tiedoston luominen
             }
@@ -232,6 +302,9 @@ class Create
             system("cd #{globals["name"]} && #{wp_core_cmd}")
             puts "Activating plugins.."
             system("cd #{globals["name"]} && gdev exec wp plugin activate --all")
+            if globals["is_multisite"] == true
+                system('cd '+globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')           
+            end
         end
 
     end
