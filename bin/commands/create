@@ -193,7 +193,8 @@ class Create
                                 f.puts("#{row}\n")
                             end
                         }
-
+                        
+                        system('cd '+globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')
                     end
 
                 }
