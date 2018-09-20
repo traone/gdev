@@ -1,0 +1,63 @@
+.:RUBY:.
+
+require "yaml"
+
+class DB
+
+    class << self
+
+        def start(args)
+            raise ArgumentError, "Give database command!" unless args.length > 0
+            
+            sub_command = args[0]
+
+            case sub_command
+            when "export"
+                export_handler(args)
+            else
+                raise ArgumentError, "Subcommand not found!"
+            end
+            
+        end
+
+        def export_handler(args)
+            if args.length == 1
+                export("both", args)
+            else
+                sub_command = args[1]
+                export(sub_command, args)
+            end
+        end
+
+        def get_defaults(type)
+            defaults = Hash.new
+            file_name = ENV['HOME']+'/.gdev/gdevconf.yml'
+            if File.exist?(file_name)
+                config = YAML.load(File.read(file_name))
+                defaults = config['create']['defaults'][type]
+            else
+                puts "Could not read default file!"
+            end
+            return defaults
+        end
+
+        def exec(args)
+            container=`docker-compose ps -q web`.strip
+            puts "docker exec -it #{container} #{args.join(' ')}"
+            system "docker exec -it #{container} #{args.join(' ')}"
+        end
+
+        def export(platform, args)
+            platform_information = get_defaults("wordpress")["kontena"]
+            pwd = `echo ${PWD##*/}`
+            time = Time.now.strftime("%d-%m-%Y-%H-%M")
+            dump_filename = "#{pwd.strip}-#{time}.sql"
+            exec(["wp db export #{dump_filename}"])
+            system("scp #{dump_filename} dbhost1:#{ENV['HOME']}")
+        end
+    end
+end
+
+DB.start(args)
+
+.:/RUBY:.
