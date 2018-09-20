@@ -113,7 +113,6 @@ class Create
 
                     name_file_names.each do |file_name, data|
                         text = File.read(file_name) 
-                        puts text
                         # remove dashes from namespace strings
                         new_contents = text.gsub(data["replace"], "#{data["with"].tr('-','')}")
                         File.open(file_name, "w") { | file | 
