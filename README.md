@@ -110,13 +110,20 @@ Example gdevconf.yml:
 create:
   defaults:
     wordpress:
-      # Flynn stage cloud address
-      stage: stage.yourdomain.com
-      # Flynn production cloud address
-      production: production.yourdomain.com
-      smtp_host: "172.17.0.1"
-      components: "dustpress"
-      theme: "git@github.com:devgeniem/wp-starter-dustpress-theme.git"
+      extra_repositories:
+        - repositories.devgeniem/nginx-helper git git@github.com:devgeniem/nginx-helper.git
+      extra_packages:
+        - rtcamp/nginx-helper
+      service_accounts:
+        dev: service-account
+        stage: service-account
+        production: service-account
+      kontena:
+        platforms:
+          geniem/stage:
+            database: databaseip
+          geniem/production:
+            database: databaseip
     nodejs: TODO
     silverbullet: TODO
 ```
