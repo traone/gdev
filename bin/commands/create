@@ -87,10 +87,12 @@ class Create
                             "asiakas.test" => "#{name}.test"
                         },
                         "#{name}/kontena-stage.yml" => {
+                            "devgeniem/client-asiakas" => "eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{name}"
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
                         },
                         "#{name}/kontena-production.yml" => {
+                            "devgeniem/client-asiakas" => "eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{name}"
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
                         }
