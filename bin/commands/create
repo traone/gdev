@@ -178,7 +178,7 @@ class Create
                             "define( 'BLOG_ID_CURRENT_SITE', 1 );"
                         ]
                         
-                        open("#{setup_file}", 'a') { |f|
+                        open("#{application_file}", 'a') { |f|
                             multisite_content.each do | row |
                                 f.puts("#{row}\n")
                             end
@@ -242,8 +242,8 @@ class Create
                         system("gcloud iam service-accounts keys create #{globals["name"]}-stage.json --iam-account #{globals["name"]}-stage@#{defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com")
                         system("gcloud iam service-accounts keys create #{globals["name"]}-production.json --iam-account #{globals["name"]}-production@#{defaults["service_accounts"]["production"]}.iam.gserviceaccount.com")                        
                         #system("cat #{globals["name"]}-dev.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-dev.min.json")
-                        system("cat #{globals["name"]}-stage.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-stage.min.json")
-                        system("cat #{globals["name"]}-production.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-production.min.json")
+                        system("cat #{globals["name"]}-stage.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{globals["name"]}-stage.min.json")
+                        system("cat #{globals["name"]}-production.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{globals["name"]}-production.min.json")
                     end
                 },
                 "install_kontena_stacks" => -> (yesno) {
