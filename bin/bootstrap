@@ -137,6 +137,7 @@ if [ -d "$GDEV_DIR" ]; then
   git reset HEAD --hard && git pull origin HEAD
   git fetch --all
   sudo git checkout buckets-and-stacks
+  sudo git pull origin buckets-and-stacks
 else
   # On OSX Sierra /usr/local is not owned by admin user and we can't just clone over there
   echo "Checking out gdev repo... ( This needs sudo permissions )"
