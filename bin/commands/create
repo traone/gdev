@@ -79,50 +79,37 @@ class Create
 
                     name_file_names = {
                         "#{name}/docker-compose.yml" => {
-                            "replace" => /THEMENAME/,
-                            "with"    => name
+                            "THEMENAME" => name,                   
+                            "asiakas.test" => "#{name}.test"
                         },
                         "#{name}/docker-compose-ubuntu.yml" => {
-                            "replace" => /THEMENAME/,
-                            "with"    => name
-                        },
-                        "#{name}/docker-compose.yml" => {
-                            "replace" => /wordpress.test/,
-                            "with"    => "#{name}.test"
-                        },
-                        "#{name}/docker-compose-ubuntu.yml" => {
-                            "replace" => /wordpress.test/,
-                            "with"    => "#{name}.test"
+                            "THEMENAME" => name,                   
+                            "asiakas.test" => "#{name}.test"
                         },
                         "#{name}/kontena-stage.yml" => {
-                            "replace" => "asiakas",
-                            "with"    => name
-                        },
-                        "#{name}/kontena-stage.yml" => {
-                            "replace" => /Asiakas/,
-                            "with"    => name.capitalize
+                            "asiakas" => name,
+                            "Asiakas" => name.capitalize
                         },
                         "#{name}/kontena-production.yml" => {
-                            "replace" => "asiakas",
-                            "with"    => name
-                        },
-                        "#{name}/kontena-production.yml" => {
-                            "replace" => /Asiakas/,
-                            "with"    => name.capitalize
-                        },
-
+                            "asiakas" => name,
+                            "Asiakas" => name.capitalize
+                        }
                     }
 
                     name_file_names.each do |file_name, data|
-                        text = File.read(file_name) 
-                        # remove dashes from namespace strings
-                        new_contents = text.gsub(data["replace"], "#{data["with"].tr('-','')}")
+                        text = File.read(file_name)
+
+                        new_contents = text
+                        
+                        data.each do |replace, with|
+                            new_contents = new_contents.gsub(replace, with)
+                        end
+                        
                         File.open(file_name, "w") { | file | 
                             file.puts new_contents 
                         }
                     end
-                    
-                    
+                
                 },
                 "php_session_redis_db" => -> (session_db) {
                     session_db = session_db.to_i
@@ -197,6 +184,32 @@ class Create
                             end
                         }
 
+
+                    else                    
+
+                        # Replace WPMS if not multisite
+                        wpms_replace = {
+                            "#{globals["name"]}/kontena-stage.yml" => {
+                                "WPMS" => "WP",
+                            },
+                            "#{globals["name"]}/kontena-production.yml" => {
+                                "WPMS" => "WP",
+                            }
+                        }
+
+                        wpms_replace.each do |file_name, data|
+                            text = File.read(file_name)
+
+                            new_contents = text
+                            data.each do |replace, with|
+                                new_contents = new_contents.gsub(replace, with)
+                            end
+                            
+                            File.open(file_name, "w") { | file | 
+                                file.puts new_contents 
+                            }
+                        end
+                        
                     end
 
                 },
@@ -204,7 +217,7 @@ class Create
                     if is_yes(yesno)
                         globals["create_buckets"] = true
                         puts "Login to Google Cloud.."
-                        system("gcloud auth login")
+                        #system("gcloud auth login")
 
                         puts("Creating service accounts..")
                         #system("gcloud config set project #{defaults["service_accounts"]["dev"]}")
@@ -236,20 +249,20 @@ class Create
                 "install_kontena_stacks" => -> (yesno) {
                     if is_yes(yesno)
                         puts "Building initial images.."
-                        #system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage .")
-                        #system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest .")
+                        system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage .")
+                        system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest .")
 
                         puts "Pushing initial images.."
                         system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
-                        #system("docker push eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage")
+                        system("docker push eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage")
                         system("gcloud config set project #{defaults["service_accounts"]["production"]}")
-                        #system("docker push eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest")
+                        system("docker push eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest")
 
                         puts "Login to Kontena.."
                         system("kontena cloud login")
 
                         puts "Selecting stage platform.."
-                        system("kontena cloud platform use geniem/stage")
+                        system("kontena master use geniem/stage")
                         puts "Installing stage stack.."
                         stage_stack_cmd = "kontena stack install kontena-stage.yml"
                         system("cd #{globals["name"]} && #{stage_stack_cmd}")
@@ -259,7 +272,7 @@ class Create
                         end
                         
                         puts "Selecting production platform.."
-                        system("kontena cloud platform use geniem/production")
+                        system("kontena master use geniem/production")
                         puts "Installing production stack.."
                         production_stack_cmd = "kontena stack install kontena-production.yml"
                         system("cd #{globals["name"]} && #{production_stack_cmd}")                        

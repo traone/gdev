@@ -1,7 +1,7 @@
-require "#{File.dirname(__FILE__)}/CommandHandler.rb"
+require_relative "CommandHandler.rb"
 
 class CommandLoader
-    COMMAND_FOLDER = "#{File.dirname(__FILE__)}/commands/"
+    COMMAND_FOLDER = "commands/"
     def self.load(args)
         current_command = args.shift
         all_commands = Dir["#{COMMAND_FOLDER}*"]
