@@ -135,10 +135,13 @@ if [ -d "$GDEV_DIR" ]; then
   cd $GDEV_DIR
   # Remove any local changes and update to origin
   git reset HEAD --hard && git pull origin HEAD
+  git fetch --all
+  sudo git checkout buckets-and-stacks
 else
   # On OSX Sierra /usr/local is not owned by admin user and we can't just clone over there
   echo "Checking out gdev repo... ( This needs sudo permissions )"
   sudo git clone https://github.com/$REPO.git $GDEV_DIR
+  sudo git checkout buckets-and-stacks
 
   # Check that gdev folder has right permissions
   sudo chown -R $USER:$(id -gn) $GDEV_DIR
@@ -153,3 +156,4 @@ ansible-playbook mac.yml -i 127.0.0.1, --ask-become-pass -vvvv
 
 # Help user to debug usual problems
 echo "If you had any errors you can try reboot your machine and then running this again."
+echo "Remember to update your gdev conf according to readme!"
