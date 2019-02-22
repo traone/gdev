@@ -262,7 +262,7 @@ class Create
                         system("kontena cloud login")
 
                         puts "Selecting stage platform.."
-                        system("kontena master use geniem/stage")
+                        system("kontena master use geniem-stage")
                         puts "Installing stage stack.."
                         stage_stack_cmd = "kontena stack install kontena-stage.yml"
                         system("cd #{globals["name"]} && #{stage_stack_cmd}")
@@ -272,7 +272,7 @@ class Create
                         end
                         
                         puts "Selecting production platform.."
-                        system("kontena master use geniem/production")
+                        system("kontena master use geniem-production")
                         puts "Installing production stack.."
                         production_stack_cmd = "kontena stack install kontena-production.yml"
                         system("cd #{globals["name"]} && #{production_stack_cmd}")                        
