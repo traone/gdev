@@ -251,14 +251,14 @@ class Create
                 "install_kontena_stacks" => -> (yesno) {
                     if is_yes(yesno)
                         puts "Building initial images.."
-                        system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage .")
-                        system("cd #{globals["name"]} && docker build --pull -t eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest .")
+                        system("cd #{globals["name"]} && docker build --pull -t gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage .")
+                        system("cd #{globals["name"]} && docker build --pull -t gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest .")
 
                         puts "Pushing initial images.."
                         system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
-                        system("docker push eu.gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage")
+                        system("docker push gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{globals["name"]}:stage")
                         system("gcloud config set project #{defaults["service_accounts"]["production"]}")
-                        system("docker push eu.gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest")
+                        system("docker push gcr.io/#{defaults["service_accounts"]["production"]}/client-#{globals["name"]}:latest")
 
                         puts "Login to Kontena.."
                         system("kontena cloud login")
