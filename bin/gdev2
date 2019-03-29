@@ -1,4 +1,6 @@
-require "#{File.dirname(__FILE__)}/CommandLoader.rb"
+#!/usr/bin/env ruby
+
+require_relative "CommandLoader.rb"
 
 class Main
     MAIN_LOCATION = File.dirname(__FILE__)

@@ -1,2 +1,4 @@
 # Ignore ansible retry files
 ansible/*.retry
+
+scripts/tmp-create-db.sql

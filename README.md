@@ -110,13 +110,20 @@ Example gdevconf.yml:
 create:
   defaults:
     wordpress:
-      # Flynn stage cloud address
-      stage: stage.yourdomain.com
-      # Flynn production cloud address
-      production: production.yourdomain.com
-      smtp_host: "172.17.0.1"
-      components: "dustpress"
-      theme: "git@github.com:devgeniem/wp-starter-dustpress-theme.git"
+      extra_repositories:
+        - repositories.devgeniem/nginx-helper git git@github.com:devgeniem/nginx-helper.git
+      extra_packages:
+        - rtcamp/nginx-helper
+      service_accounts:
+        dev: service-account
+        stage: service-account
+        production: service-account
+      kontena:
+        platforms:
+          geniem/stage:
+            database: databaseip
+          geniem/production:
+            database: databaseip
     nodejs: TODO
     silverbullet: TODO
 ```
@@ -182,3 +189,23 @@ $ gdev reload
 `gdev` is available under the MIT license. See the LICENSE file for more info.
 
 Copyright 2017 Geniem Oy.
+
+
+# gdev v2.0
+
+## Install Google Cloud SDK
+
+( https://cloud.google.com/sdk/install )
+
+## Authenticate to goole container registry.
+```
+$ gcloud auth configure-docker
+```
+## add google sdk to path
+
+/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin
+
+## Install docker-credential-gcr
+```
+gcloud components install docker-credential-gcr
+```

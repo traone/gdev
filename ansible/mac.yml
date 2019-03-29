@@ -57,6 +57,13 @@
         dest: /usr/local/bin/gdev
         state: link
       tags: ['pre-install']
+    
+    - name: Symlink gdev2 bin to PATH
+      file:
+        src: "{{gdev_env_dir}}/bin/gdev2"
+        dest: /usr/local/bin/gdev2
+        state: link
+      tags: ['pre-install']
 
     - name: Check that host ip looback is running
       command: "ifconfig lo0 alias 10.254.254.254"

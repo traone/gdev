@@ -9,14 +9,14 @@ class Page
     class << self
 
         def create(name)
-            theme_name = Dir["#{THEME_FOLDER}*"]
+            theme_name = Dir["#{THEMES_FOLDER}*"]
                 .select{ |f| File.directory? f}
                 .unshift
                 .join
             
             theme_name = File.basename(theme_name)
-            theme_path = "#{THEMES_FOLDER}#{theme_name}"
-            models_path = "#{theme_path}#{MODELS_FOLDER}"
+            theme_path = "#{Page::THEMES_FOLDER}#{theme_name}"
+            models_path = "#{theme_path}#{self::MODELS_FOLDER}"
             model = new Template("page_model", models_path, "Page#{name.capitalize}.php")
 
             # TODO:
