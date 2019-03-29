@@ -1,13 +1,12 @@
-.:RUBY:.
-
 require "yaml"
+require "net/ssh"
 
 class Create
     
     class << self
         
         def start(args)
-            cfg_file = args.length > 0 ? args[0] : "config.yaml"
+            cfg_file = args.length > 0 ? args[0] : "gdev2-create.yaml"
 
             if (File.file?(cfg_file))
                 puts "Config file found, generating project.."
@@ -272,7 +271,7 @@ class Create
                             puts "Setting stage GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
                             system("kontena vault write #{globals["name"]}-google-cloud-storage-access-key \"$(cat #{globals["name"]}-stage.min.json)\"")
                         end
-=begin
+
                         puts "Selecting production platform.."
                         system("kontena master use geniem-production")
                         puts "Installing production stack.."
@@ -282,12 +281,31 @@ class Create
                             puts "Setting production GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
                             system("kontena vault write #{globals["name"]}-google-cloud-storage-access-key \"$(cat #{globals["name"]}-production.min.json)\"")
                         end
-=end
                     end
+                },
+                "create_databases" => -> (yesno) {
+                    puts "Give stage MySQL root password"
+                    mysql_pass = gets
+                    puts "Selecting stage platform.."
+                    system("kontena master use geniem-stage")
+                    password = `openssl rand -hex 42`.strip
+                    new_db = "create database \\`client-#{globals["name"]}\\`; CREATE USER \\`client-#{globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{globals["name"]}\\`.* to \\`client-#{globals["name"]}\\`@\\`localhost\\`; flush privileges;"
+                    cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
+                    ssh = system("ssh dbhost1 '#{cmd}'")
+                    system("kontena vault write client-#{globals["name"]}-mysql-password #{password}")
+
+                    puts "Give production MySQL root password"
+                    mysql_pass = gets
+                    puts "Selecting production platform.."
+                    system("kontena master use geniem-production")
+                    password = `openssl rand -hex 42`.strip
+                    new_db = "create database \\`client-#{globals["name"]}\\`; CREATE USER \\`client-#{globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{globals["name"]}\\`.* to \\`client-#{globals["name"]}\\`@\\`localhost\\`; flush privileges;"
+                    cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
+                    ssh = system("ssh dbprod1 '#{cmd}'")
+                    system("kontena vault write client-#{globals["name"]}-mysql-password #{password}")
+
+                    puts "Databases created."
                 }
-                # TODO:
-                # Repo
-                # Wizardilla yaml tiedoston luominen
             }
 
             actions.each do | command, action |
@@ -296,7 +314,7 @@ class Create
                 else
                     beautify = command.capitalize.gsub(/_/, " ")
                     puts "#{beautify} not set."
-                    puts "Give #{beautify}:"
+                    puts "#{beautify}:"
                     argument = gets
                     argument = argument.strip
                     action.call(argument)
@@ -327,5 +345,3 @@ class Create
 end
 
 Create.start(args)
-
-.:/RUBY:.
