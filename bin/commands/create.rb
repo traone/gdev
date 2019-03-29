@@ -95,12 +95,12 @@ class Create
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
                         },
-                        "#{name}/gcloud/cloudbuild-production.yaml" => {
+                        "#{name}/gcloud/cloudbuild_production.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
                             "PROJECTNAME" => "client-#{name}"
                         },
-                        "#{name}/gcloud/cloudbuild-stage.yaml" => {
+                        "#{name}/gcloud/cloudbuild_stage.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
                             "PROJECTNAME" => "client-#{name}"
