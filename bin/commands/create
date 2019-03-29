@@ -3,9 +3,9 @@
 require "yaml"
 
 class Create
-    
+
     class << self
-        
+
         def start(args)
             cfg_file = args.length > 0 ? args[0] : "config.yaml"
 
@@ -64,10 +64,10 @@ class Create
 
                     puts "Cloning WP project to project folder.."
                     system("git clone git@github.com:devgeniem/wp-project.git #{name}")
-                    
+
                     puts "Removing .git folder from project folder.."
                     system("rm -rf #{name}/.git")
-                    
+
                     puts "Cloning dustpress-theme to project folder.."
                     system("git clone git@github.com:devgeniem/the-dustpress-theme.git #{name}/web/app/themes/#{name}")
 
@@ -79,11 +79,11 @@ class Create
 
                     name_file_names = {
                         "#{name}/docker-compose.yml" => {
-                            "THEMENAME" => name,                   
+                            "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test"
                         },
                         "#{name}/docker-compose-ubuntu.yml" => {
-                            "THEMENAME" => name,                   
+                            "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test"
                         },
                         "#{name}/kontena-stage.yml" => {
@@ -95,6 +95,19 @@ class Create
                             "image: devgeniem/client-asiakas" => "image: gcr.io/#{defaults["service_accounts"]["production"]}/client-#{name}",
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
+                        },
+                        "#{name}/gcloud/cloudbuild-production.yaml" => {
+                            "THEMENAME" => name,
+                            "asiakas.test" => "#{name}.test",
+                            "PROJECTNAME" => "client-#{name}
+                        },
+                        "#{name}/gcloud/cloudbuild-stage.yaml" => {
+                            "THEMENAME" => name,
+                            "asiakas.test" => "#{name}.test",
+                            "PROJECTNAME" => "client-#{name}
+                        },
+                        "#{name}/tests/acceptance.suite.yml" => {
+                            "asiakas.test" => "#{name}.test"
                         }
                     }
 
@@ -102,16 +115,16 @@ class Create
                         text = File.read(file_name)
 
                         new_contents = text
-                        
+
                         data.each do |replace, with|
                             new_contents = new_contents.gsub(replace, with)
                         end
-                        
-                        File.open(file_name, "w") { | file | 
-                            file.puts new_contents 
+
+                        File.open(file_name, "w") { | file |
+                            file.puts new_contents
                         }
                     end
-                
+
                 },
                 "php_session_redis_db" => -> (session_db) {
                     session_db = session_db.to_i
@@ -134,7 +147,7 @@ class Create
                         new_contents = text.gsub(data["replace"], data["with"])
                         File.open(file_name, "w") {|file| file.puts new_contents }
                     end
-                }, 
+                },
                 "add_default_repositories" => -> (yesno) {
                     if !is_yes(yesno)
                         return
@@ -179,7 +192,7 @@ class Create
                             "define( 'SITE_ID_CURRENT_SITE', 1 );",
                             "define( 'BLOG_ID_CURRENT_SITE', 1 );"
                         ]
-                        
+
                         open("#{application_file}", 'a') { |f|
                             multisite_content.each do | row |
                                 f.puts("#{row}\n")
@@ -187,7 +200,7 @@ class Create
                         }
 
 
-                    else                    
+                    else
 
                         # Replace WPMS if not multisite
                         wpms_replace = {
@@ -206,12 +219,12 @@ class Create
                             data.each do |replace, with|
                                 new_contents = new_contents.gsub(replace, with)
                             end
-                            
-                            File.open(file_name, "w") { | file | 
-                                file.puts new_contents 
+
+                            File.open(file_name, "w") { | file |
+                                file.puts new_contents
                             }
                         end
-                        
+
                     end
 
                 },
@@ -228,12 +241,12 @@ class Create
                         system("gcloud iam service-accounts create #{globals["name"]}-stage --display-name \"#{globals["name"]} stage\"")
                         system("gcloud config set project #{defaults["service_accounts"]["production"]}")
                         system("gcloud iam service-accounts create #{globals["name"]}-production --display-name \"#{globals["name"]} production\"")
-                        
+
                         puts("Creating buckets..")
                         #system("gsutil mb -l eu -p #{defaults["service_accounts"]["dev"]} gs://#{globals["name"]}-dev")
                         system("gsutil mb -l eu -p #{defaults["service_accounts"]["stage"]} gs://#{globals["name"]}-stage")
                         system("gsutil mb -l eu -p #{defaults["service_accounts"]["production"]} gs://#{globals["name"]}-production")
-                        
+
                         puts("Settings bucket permissions..")
                         #system("gsutil acl ch -u #{globals["name"]}-dev@#{defaults["service_accounts"]["dev"]}.iam.gserviceaccount.com:W gs://#{globals["name"]}-dev")
                         system("gsutil acl ch -u #{globals["name"]}-stage@#{defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com:W gs://#{globals["name"]}-stage")
@@ -242,7 +255,7 @@ class Create
                         puts("Creating keys for service accounts..")
                         #system("gcloud iam service-accounts keys create #{globals["name"]}-dev.json --iam-account #{globals["name"]}-dev@#{defaults["service_accounts"]["dev"]}.iam.gserviceaccount.com")
                         system("gcloud iam service-accounts keys create #{globals["name"]}-stage.json --iam-account #{globals["name"]}-stage@#{defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com")
-                        system("gcloud iam service-accounts keys create #{globals["name"]}-production.json --iam-account #{globals["name"]}-production@#{defaults["service_accounts"]["production"]}.iam.gserviceaccount.com")                        
+                        system("gcloud iam service-accounts keys create #{globals["name"]}-production.json --iam-account #{globals["name"]}-production@#{defaults["service_accounts"]["production"]}.iam.gserviceaccount.com")
                         #system("cat #{globals["name"]}-dev.json | python -c 'import sys, json; print json.dumps(json.load(sys.stdin),sort_keys=True)' > #{globals["name"]}-dev.min.json")
                         system("cat #{globals["name"]}-stage.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{globals["name"]}-stage.min.json")
                         system("cat #{globals["name"]}-production.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{globals["name"]}-production.min.json")
@@ -277,7 +290,7 @@ class Create
                         system("kontena master use geniem-production")
                         puts "Installing production stack.."
                         production_stack_cmd = "kontena stack install kontena-production.yml"
-                        system("cd #{globals["name"]} && #{production_stack_cmd}")                        
+                        system("cd #{globals["name"]} && #{production_stack_cmd}")
                         if globals["create_buckets"] == true
                             puts "Setting production GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
                             system("kontena vault write #{globals["name"]}-google-cloud-storage-access-key \"$(cat #{globals["name"]}-production.min.json)\"")
@@ -319,7 +332,7 @@ class Create
             puts "Activating plugins.."
             system("cd #{globals["name"]} && gdev exec wp plugin activate --all")
             if globals["is_multisite"] == true
-                system('cd '+globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')           
+                system('cd '+globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')
             end
         end
 
