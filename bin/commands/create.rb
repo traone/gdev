@@ -85,6 +85,10 @@ class Create
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test"
                         },
+                        "#{name}/docker-compose-gcloud.yml" => {
+                            "THEMENAME" => name,
+                            "asiakas.test" => "#{name}.test"
+                        },
                         "#{name}/kontena-stage.yml" => {
                             "image: devgeniem/client-asiakas" => "image: gcr.io/#{defaults["service_accounts"]["stage"]}/client-#{name}",
                             "asiakas" => name,
