@@ -99,12 +99,12 @@ class Create
                         "#{name}/gcloud/cloudbuild-production.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
-                            "PROJECTNAME" => "client-#{name}
+                            "PROJECTNAME" => "client-#{name}"
                         },
                         "#{name}/gcloud/cloudbuild-stage.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
-                            "PROJECTNAME" => "client-#{name}
+                            "PROJECTNAME" => "client-#{name}"
                         },
                         "#{name}/tests/acceptance.suite.yml" => {
                             "asiakas.test" => "#{name}.test"
