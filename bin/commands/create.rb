@@ -1,5 +1,4 @@
 require "yaml"
-require "net/ssh"
 
 class Create
 
@@ -308,7 +307,7 @@ class Create
                     password = `openssl rand -hex 42`.strip
                     new_db = "create database \\`client-#{globals["name"]}\\`; CREATE USER \\`client-#{globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{globals["name"]}\\`.* to \\`client-#{globals["name"]}\\`@\\`localhost\\`; flush privileges;"
                     cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                    ssh = system("ssh dbhost1 '#{cmd}'")
+                    ssh = system("ssh #{defaults["kontena"]["platforms"]["geniem/stage"]["database"]} '#{cmd}'")
                     system("kontena vault write client-#{globals["name"]}-mysql-password #{password}")
 
                     puts "Give production MySQL root password"
@@ -318,7 +317,7 @@ class Create
                     password = `openssl rand -hex 42`.strip
                     new_db = "create database \\`client-#{globals["name"]}\\`; CREATE USER \\`client-#{globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{globals["name"]}\\`.* to \\`client-#{globals["name"]}\\`@\\`localhost\\`; flush privileges;"
                     cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                    ssh = system("ssh dbprod1 '#{cmd}'")
+                    ssh = system("ssh #{defaults["kontena"]["platforms"]["geniem/production"]["database"]} '#{cmd}'")
                     system("kontena vault write client-#{globals["name"]}-mysql-password #{password}")
 
                     puts "Databases created."
