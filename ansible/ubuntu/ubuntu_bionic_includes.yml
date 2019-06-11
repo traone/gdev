@@ -1,2 +1,2 @@
     - name: Use tasks from zesty release
-      include: "ubuntu_bionic_includes.yml"
+      include: "ubuntu_zesty_includes.yml"
