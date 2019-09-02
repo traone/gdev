@@ -108,6 +108,16 @@ class Create
                             "asiakas.test" => "#{name}.test",
                             "PROJECTNAME" => "client-#{name}"
                         },
+                        "#{name}/gcloud/trigger_stage.json" => {
+                            "REPO-OWNER"  => "devgeniem", #TODO: from config
+                            "GCP_PROJECT" => "#{defaults["service_accounts"]["stage"]}",
+                            "PROJECTNAME" => "client-#{name}"
+                        },
+                        "#{name}/gcloud/trigger_production.json" => {
+                            "REPO-OWNER"  => "devgeniem", #TODO: from config
+                            "GCP_PROJECT" => "#{defaults["service_accounts"]["production"]}",
+                            "PROJECTNAME" => "client-#{name}"
+                        },
                         "#{name}/tests/acceptance.suite.yml" => {
                             "asiakas.test" => "#{name}.test"
                         }
@@ -383,6 +393,16 @@ class Create
                     system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}")
 
                     puts "Databases created."
+                },
+                "initialize_gcp" => -> (yesno) {
+                    if is_yes(yesno)
+                        puts "Initializing GCP"
+                        system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
+                        system("gcloud alpha builds triggers create github --trigger-config=#{name}/gcloud/trigger_stage.json")
+                        system("gcloud config set project #{defaults["service_accounts"]["production"]}")
+                        system("gcloud alpha builds triggers create github --trigger-config=#{name}/gcloud/trigger_production.json")
+                        puts "GCP triggers created. Connect GitHub to GCP via browser to enable."
+                    end
                 }
             }
 
