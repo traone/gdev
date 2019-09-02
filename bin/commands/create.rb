@@ -162,7 +162,7 @@ class Create
                 },
                 "add_default_repositories;Do you want to add default packages and repositories to Composer from config file? (yes/no)" => -> (yesno) {
                     if !is_yes(yesno)
-                        #system("cd #{$globals["name"]} && composer install")
+                        system("cd #{$globals["name"]} && composer install")
                         return
                     else
                         repositories = $defaults["extra_repositories"]
@@ -241,7 +241,7 @@ class Create
                     end
 
                 },
-                "create_buckets;Do you want to create Google buckets for project? Requires Google Cloud account, cli (gcloud and gsutil) and permissions, and service account projects must be added to config file. (yes/no)" => -> (yesno) {
+                "create_buckets;Do you want to create Google buckets for project? Requires Google Cloud account, cli (gcloud and gsutil) and permissions, and config file must contain Google Cloud projects for each environment. (yes/no)" => -> (yesno) {
                 if is_yes(yesno)
                         $globals["create_buckets"] = true
                         $dev_created = false
@@ -289,7 +289,7 @@ class Create
                             return
                         end
 
-                        puts("Do you want to create bucket for development environment? (yes/no)")
+                        puts "Do you want to create bucket for development environment? (yes/no)"
                         if is_yes(gets)
                             $dev_created = true
                             puts("Creating service accounts..")
@@ -304,7 +304,7 @@ class Create
                             run_command("cat #{$globals["name"]}-dev.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{$globals["name"]}-dev.min.json") or return
                         end
                         
-                        puts("Do you want to create bucket for staging environment? (yes/no)")
+                        puts "Do you want to create bucket for staging environment? (yes/no)"
                         if is_yes(gets)
                             $stage_created = true
                             puts("Creating service accounts..")
@@ -319,7 +319,7 @@ class Create
                             run_command("cat #{$globals["name"]}-stage.json | python -c 'import sys, json; print(json.dumps(json.load(sys.stdin),sort_keys=True))' > #{$globals["name"]}-stage.min.json") or return
                         end
 
-                        puts("Do you want to create bucket for production environment? (yes/no)")
+                        puts "Do you want to create bucket for production environment? (yes/no)"
                         if is_yes(gets)
                             $production_created = true
                             puts("Creating service accounts..")
@@ -335,43 +335,88 @@ class Create
                         end
                     end
                 },
-                "install_kontena_stacks" => -> (yesno) {
+                "install_kontena_stacks;Do you want to create Kontena stacks for project? (yes/no)" => -> (yesno) {
                     if is_yes(yesno)
-                        puts "Building initial images.."
-                        system("cd #{$globals["name"]} && docker build --pull -t gcr.io/#{$defaults["service_accounts"]["stage"]}/client-#{$globals["name"]}:stage .")
-                        system("cd #{$globals["name"]} && docker build --pull -t gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{$globals["name"]}:latest .")
-
-                        puts "Pushing initial images.."
-                        system("gcloud config set project #{$defaults["service_accounts"]["stage"]}")
-                        system("docker push gcr.io/#{$defaults["service_accounts"]["stage"]}/client-#{$globals["name"]}:stage")
-                        system("gcloud config set project #{$defaults["service_accounts"]["production"]}")
-                        system("docker push gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{$globals["name"]}:latest")
-
-                        puts "Login to Kontena.."
-                        system("kontena cloud login")
-
-                        puts "Selecting stage platform.."
-                        system("kontena master use geniem-stage")
-                        puts "Installing stage stack.."
-                        stage_stack_cmd = "kontena stack install kontena-stage.yml"
-                        system("cd #{$globals["name"]} && #{stage_stack_cmd}")
-                        if $globals["create_buckets"] == true
-                            puts "Setting stage GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
-                            system("kontena vault write #{$globals["name"]}-google-cloud-storage-access-key \"$(cat #{$globals["name"]}-stage.min.json)\"")
+                        puts "Do you want to create image for staging environment? (yes/no)"
+                        if is_yes(gets)
+                            puts "Building initial images.."
+                            system("cd #{$globals["name"]} && docker build --pull -t gcr.io/#{$defaults["service_accounts"]["stage"]}/client-#{$globals["name"]}:stage .")
+                            puts "Pushing initial images.."
+                            system("gcloud config set project #{$defaults["service_accounts"]["stage"]}")
+                            system("docker push gcr.io/#{$defaults["service_accounts"]["stage"]}/client-#{$globals["name"]}:stage")
                         end
 
-                        puts "Selecting production platform.."
-                        system("kontena master use geniem-production")
-                        puts "Installing production stack.."
-                        production_stack_cmd = "kontena stack install kontena-production.yml"
-                        system("cd #{$globals["name"]} && #{production_stack_cmd}")
-                        if $globals["create_buckets"] == true
-                            puts "Setting production GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
-                            system("kontena vault write #{$globals["name"]}-google-cloud-storage-access-key \"$(cat #{$globals["name"]}-production.min.json)\"")
+                        puts "Do you want to create image for production environment? (yes/no)"
+                        if is_yes(gets)
+                            puts "Building initial images.."
+                            system("cd #{$globals["name"]} && docker build --pull -t gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{$globals["name"]}:latest .")
+                            puts "Pushing initial images.."
+                            system("gcloud config set project #{$defaults["service_accounts"]["production"]}")
+                            system("docker push gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{$globals["name"]}:latest")
+                        end
+
+
+                        puts "Login to Kontena.."
+                        if system("kontena cloud login") != true
+                            put "Kontena Cloud login failed, continuing without stacks.."
+                            return
+                        end
+
+                        $stage_stack_created = false
+                        $prod_stack_created = false
+
+                        def run_command(command)
+                            if (system(command) != true)
+                                return kontena_rollback()
+                            end
+                            return true
+                        end
+
+                        def kontena_rollback()
+                            if $stage_stack_created
+                                puts "Removing stage stack.."
+                                system("kontena master use geniem-stage")
+                                system("kontena stack remove client-#{name}")
+                            end
+
+                            if $prod_stack_created
+                                puts "Removing production stack.."
+                                system("kontena master use geniem-production")
+                                system("kontena stack remove client-#{name}")
+                            end
+
+                            puts "Rollback was succesfull, continuing with creation script without Kontena stacks."
+                            return false
+                        end
+
+                        puts "Do you want to create Kontena stack for staging environment? Requires that image has been created and pushed (yes/no)"
+                        if is_yes(gets)
+                            puts "Selecting stage platform.."
+                            run_command("kontena master use geniem-stage") or return
+                            puts "Installing stage stack.."
+                            stage_stack_cmd = "kontena stack install kontena-stage.yml"
+                            run_command("cd #{$globals["name"]} && #{stage_stack_cmd}") or return
+                            if $globals["create_buckets"] == true
+                                puts "Setting stage GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
+                                run_command("kontena vault write #{$globals["name"]}-google-cloud-storage-access-key \"$(cat #{$globals["name"]}-stage.min.json)\"") or return
+                            end
+                        end
+
+                        puts "Do you want to create Kontena stack for production environment? Requires that image has been created and pushed (yes/no)"
+                        if is_yes(gets)
+                            puts "Selecting production platform.."
+                            run_command("kontena master use geniem-production") or return
+                            puts "Installing production stack.."
+                            production_stack_cmd = "kontena stack install kontena-production.yml"
+                            run_command("cd #{$globals["name"]} && #{production_stack_cmd}") or return
+                            if $globals["create_buckets"] == true
+                                puts "Setting production GOOGLE_CLOUD_STORAGE_ACCESS_KEY.."
+                                run_command("kontena vault write #{$globals["name"]}-google-cloud-storage-access-key \"$(cat #{$globals["name"]}-production.min.json)\"") or return
+                            end
                         end
                     end
                 },
-                "create_databases" => -> (yesno) {
+                "create_databases;Do you want to create databases for project? (yes/no)" => -> (yesno) {
                     puts "Give stage MySQL root password"
                     mysql_pass = gets
                     puts "Selecting stage platform.."
@@ -394,12 +439,12 @@ class Create
 
                     puts "Databases created."
                 },
-                "initialize_gcp" => -> (yesno) {
+                "initialize_gcp;Do you want to setup Google Cloud Platform? (yes/no)" => -> (yesno) {
                     if is_yes(yesno)
                         puts "Initializing GCP"
-                        system("gcloud config set project #{defaults["service_accounts"]["stage"]}")
+                        system("gcloud config set project #{$defaults["service_accounts"]["stage"]}")
                         system("gcloud alpha builds triggers create github --trigger-config=#{name}/gcloud/trigger_stage.json")
-                        system("gcloud config set project #{defaults["service_accounts"]["production"]}")
+                        system("gcloud config set project #{$defaults["service_accounts"]["production"]}")
                         system("gcloud alpha builds triggers create github --trigger-config=#{name}/gcloud/trigger_production.json")
                         puts "GCP triggers created. Connect GitHub to GCP via browser to enable."
                     end
@@ -419,22 +464,25 @@ class Create
             end
 
             # After setup..
-            puts "Starting gdev.."
-            system("cd #{$globals["name"]} && gdev up")
-            puts "Give admin username:"
-            admin_user = gets
-            puts "Give admin email:"
-            admin_email = gets
-            puts "Give admin password:"
-            admin_password = gets
-            wp_core_cmd = "gdev exec wp core install --url=#{$globals["name"].strip}.test --title=#{$globals["name"].strip} --admin_user=#{admin_user.strip} --admin_email=#{admin_email.strip} --admin_password=#{admin_password.strip}"
-            puts "Installing WP core.."
-            puts wp_core_cmd
-            system("cd #{$globals["name"]} && #{wp_core_cmd}")
-            puts "Activating plugins.."
-            system("cd #{$globals["name"]} && gdev exec wp plugin activate --all")
-            if $globals["is_multisite"] == true
-                system('cd '+$globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')
+            puts "Do you want to setup and start local environment? (yes/no)"
+            if is_yes(gets)
+                puts "Starting gdev.."
+                system("cd #{$globals["name"]} && gdev up")
+                puts "Give local Wordpress admin username:"
+                admin_user = gets
+                puts "Give local Wordpress admin email:"
+                admin_email = gets
+                puts "Give local Wordpress admin password:"
+                admin_password = gets
+                wp_core_cmd = "gdev exec wp core install --url=#{$globals["name"].strip}.test --title=#{$globals["name"].strip} --admin_user=#{admin_user.strip} --admin_email=#{admin_email.strip} --admin_password=#{admin_password.strip}"
+                puts "Installing WP core.."
+                puts wp_core_cmd
+                system("cd #{$globals["name"]} && #{wp_core_cmd}")
+                puts "Activating plugins.."
+                system("cd #{$globals["name"]} && gdev exec wp plugin activate --all")
+                if $globals["is_multisite"] == true
+                    system('cd '+$globals["name"]+' && gdev exec wp core multisite-convert --title="Multisiten Sivustot" --subdomains')
+                end
             end
         end
 
