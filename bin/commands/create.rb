@@ -5,7 +5,7 @@ class Create
     class << self
 
         def start(args)
-            cfg_file = args.length > 0 ? args[0] : "gdev2-create.yaml"
+            cfg_file = args.length > 0 ? args[0] : "gdev-create.yaml"
 
             if (File.file?(cfg_file))
                 puts "Config file found, generating project.."
@@ -31,6 +31,7 @@ class Create
         end
 
         def is_yes(yesno)
+            yesno = yesno.chomp
             noes = [
                 "n",
                 "no",
@@ -59,6 +60,11 @@ class Create
                     raise ArgumentError, "Project name can't contain whitespaces" unless !name.include?(" ")
                     puts "Project name set"
                     $globals["name"] = name
+
+                    if Dir.exist?(name)
+                        puts "Directory already exists, continuing without git clone and replaces.."
+                        return
+                    end
 
                     puts "Cloning WP project to project folder.."
                     system("git clone git@github.com:devgeniem/wp-project.git #{name}")
@@ -97,7 +103,8 @@ class Create
                             "image: devgeniem/client-asiakas" => "image: gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{name}",
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
-                        },
+                        }#,
+=begin
                         "#{name}/gcloud/cloudbuild_production.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
@@ -108,19 +115,21 @@ class Create
                             "asiakas.test" => "#{name}.test",
                             "PROJECTNAME" => "client-#{name}"
                         },
+
                         "#{name}/gcloud/trigger_stage.json" => {
                             "REPO-OWNER"  => "devgeniem", #TODO: from config
-                            "GCP_PROJECT" => "#{defaults["service_accounts"]["stage"]}",
+                            "GCP_PROJECT" => "#{$defaults["service_accounts"]["stage"]}",
                             "PROJECTNAME" => "client-#{name}"
                         },
                         "#{name}/gcloud/trigger_production.json" => {
                             "REPO-OWNER"  => "devgeniem", #TODO: from config
-                            "GCP_PROJECT" => "#{defaults["service_accounts"]["production"]}",
+                            "GCP_PROJECT" => "#{$defaults["service_accounts"]["production"]}",
                             "PROJECTNAME" => "client-#{name}"
                         },
                         "#{name}/tests/acceptance.suite.yml" => {
                             "asiakas.test" => "#{name}.test"
-                        }
+                         }
+=end
                     }
 
                     name_file_names.each do |file_name, data|
@@ -268,7 +277,7 @@ class Create
 
                             if $stage_created
                                 puts "Deleting staging service account and bucket.."
-                                system("gcloud config set project #{$defaults["service_accounts"]["dstage"]}")
+                                system("gcloud config set project #{$defaults["service_accounts"]["stage"]}")
                                 system("gcloud iam service-accounts delete #{$globals["name"]}-stage@#{$defaults["service_accounts"]["stage"]}.iam.gserviceaccount.com")
                                 system("gsutil rm -r gs://#{$globals["name"]}-stage")
                             end
@@ -376,13 +385,13 @@ class Create
                             if $stage_stack_created
                                 puts "Removing stage stack.."
                                 system("kontena master use geniem-stage")
-                                system("kontena stack remove client-#{name}")
+                                system("kontena stack remove client-#{$globals["name"]} --force")
                             end
 
                             if $prod_stack_created
                                 puts "Removing production stack.."
                                 system("kontena master use geniem-production")
-                                system("kontena stack remove client-#{name}")
+                                system("kontena stack remove client-#{$globals["name"]} --force")
                             end
 
                             puts "Rollback was succesfull, continuing with creation script without Kontena stacks."
@@ -391,6 +400,7 @@ class Create
 
                         puts "Do you want to create Kontena stack for staging environment? Requires that image has been created and pushed (yes/no)"
                         if is_yes(gets)
+                            $stage_stack_created = true
                             puts "Selecting stage platform.."
                             run_command("kontena master use geniem-stage") or return
                             puts "Installing stage stack.."
@@ -404,6 +414,7 @@ class Create
 
                         puts "Do you want to create Kontena stack for production environment? Requires that image has been created and pushed (yes/no)"
                         if is_yes(gets)
+                            $prod_stack_created = true
                             puts "Selecting production platform.."
                             run_command("kontena master use geniem-production") or return
                             puts "Installing production stack.."
@@ -417,25 +428,31 @@ class Create
                     end
                 },
                 "create_databases;Do you want to create databases for project? (yes/no)" => -> (yesno) {
-                    puts "Give stage MySQL root password"
-                    mysql_pass = gets
-                    puts "Selecting stage platform.."
-                    system("kontena master use geniem-stage")
-                    password = `openssl rand -hex 42`.strip
-                    new_db = "create database \\`client-#{$globals["name"]}\\`; CREATE USER \\`client-#{$globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`localhost\\`; flush privileges;"
-                    cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                    ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/stage"]["database"]} '#{cmd}'")
-                    system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}")
+                    puts "Do you want to create database for stage?"
+                    if is_yes(gets)
+                        system("kontena master use geniem-stage")
+                        mysql_pass = `kontena vault read stage-root-mysql-password | grep value`.strip.split(" ")[1]
+                        password = `openssl rand -hex 42`.strip
+                        new_db = "CREATE DATABASE IF NOT EXISTS \\`client-#{$globals["name"]}\\`; CREATE USER IF NOT EXISTS \\`client-#{$globals["name"]}\\`@\\`%\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`%\\`; flush privileges;"
+                        cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
+                        puts new_db
+                        puts cmd
+                        ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/stage"]["database"]} '#{cmd}'")
+                        system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}") or system("kontena vault update client-#{$globals["name"]}-mysql-password #{password}") 
+                    end
 
-                    puts "Give production MySQL root password"
-                    mysql_pass = gets
-                    puts "Selecting production platform.."
-                    system("kontena master use geniem-production")
-                    password = `openssl rand -hex 42`.strip
-                    new_db = "create database \\`client-#{$globals["name"]}\\`; CREATE USER \\`client-#{$globals["name"]}\\`@\\`localhost\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`localhost\\`; flush privileges;"
-                    cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                    ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/production"]["database"]} '#{cmd}'")
-                    system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}")
+                    puts "Do you want to create database for production?"
+                    if is_yes(gets)
+                        puts "Give production MySQL root password"
+                        mysql_pass = gets
+                        puts "Selecting production platform.."
+                        system("kontena master use geniem-production")
+                        password = `openssl rand -hex 42`.strip
+                        new_db = "create database \\`client-#{$globals["name"]}\\`; CREATE USER \\`client-#{$globals["name"]}\\`@\\`%\\` IDENTIFIED BY \\'#{password}\\'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`%\\`; flush privileges;"
+                        cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
+                        #ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/production"]["database"]} '#{cmd}'")
+                        #system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}")
+                    end
 
                     puts "Databases created."
                 },
@@ -453,7 +470,8 @@ class Create
 
             actions.each do | command, action |
                 if (config.key?(command.split(";")[0]))
-                    action.call(config[command.split(";")[0]])
+                    cmd = config[command.split(";")[0]] ? "yes" : "no"
+                    action.call(cmd)
                 else
                     beautify = command.split(";")[1]
                     puts "#{beautify}:"
