@@ -1,4 +1,5 @@
 require "yaml"
+require "shellwords"
 
 class Create
 
@@ -103,8 +104,7 @@ class Create
                             "image: devgeniem/client-asiakas" => "image: gcr.io/#{$defaults["service_accounts"]["production"]}/client-#{name}",
                             "asiakas" => name,
                             "Asiakas" => name.capitalize
-                        }#,
-=begin
+                        },
                         "#{name}/gcloud/cloudbuild_production.yaml" => {
                             "THEMENAME" => name,
                             "asiakas.test" => "#{name}.test",
@@ -129,10 +129,13 @@ class Create
                         "#{name}/tests/acceptance.suite.yml" => {
                             "asiakas.test" => "#{name}.test"
                          }
-=end
                     }
 
                     name_file_names.each do |file_name, data|
+                        if !File.exist?(file_name)
+                            next
+                        end
+
                         text = File.read(file_name)
 
                         new_contents = text
@@ -428,33 +431,41 @@ class Create
                     end
                 },
                 "create_databases;Do you want to create databases for project? (yes/no)" => -> (yesno) {
-                    puts "Do you want to create database for stage?"
-                    if is_yes(gets)
-                        system("kontena master use geniem-stage")
-                        mysql_pass = `kontena vault read stage-root-mysql-password | grep value`.strip.split(" ")[1]
-                        password = `openssl rand -hex 42`.strip
-                        new_db = "CREATE DATABASE IF NOT EXISTS \\`client-#{$globals["name"]}\\`; CREATE USER IF NOT EXISTS \\`client-#{$globals["name"]}\\`@\\`%\\` IDENTIFIED BY '#{password}'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`%\\`; flush privileges;"
-                        cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                        puts new_db
-                        puts cmd
-                        ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/stage"]["database"]} '#{cmd}'")
-                        system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}") or system("kontena vault update client-#{$globals["name"]}-mysql-password #{password}") 
-                    end
+                    if is_yes(yesno)
+                        puts "Do you want to create database for stage?"
+                        if is_yes(gets)
+                            system("kontena master use geniem-stage")
+                            mysql_pass = `kontena vault read stage-root-mysql-password | grep value`.strip.split(" ")[1]
+                            password = `openssl rand -hex 42`.strip
+                            new_db = "CREATE DATABASE IF NOT EXISTS `client-#{$globals["name"]}`; CREATE USER `client-#{$globals["name"]}`@`%` IDENTIFIED BY \"#{password}\"; grant all privileges on `client-#{$globals["name"]}`.* to `client-#{$globals["name"]}`@`%`; flush privileges;"
+                            cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute='#{new_db}'"
+                            open("./db_script", 'w') { |f|
+                                f.puts(cmd)
+                            }
+                            ssh_cmd = "ssh #{$defaults["kontena"]["platforms"]["geniem/stage"]["database"]} < db_script"
+                            ssh = system(ssh_cmd)
+                            File.delete("./db_script")
+                            system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}") or system("kontena vault update client-#{$globals["name"]}-mysql-password #{password}") 
+                        end
 
-                    puts "Do you want to create database for production?"
-                    if is_yes(gets)
-                        puts "Give production MySQL root password"
-                        mysql_pass = gets
-                        puts "Selecting production platform.."
-                        system("kontena master use geniem-production")
-                        password = `openssl rand -hex 42`.strip
-                        new_db = "create database \\`client-#{$globals["name"]}\\`; CREATE USER \\`client-#{$globals["name"]}\\`@\\`%\\` IDENTIFIED BY \\'#{password}\\'; grant all privileges on \\`client-#{$globals["name"]}\\`.* to \\`client-#{$globals["name"]}\\`@\\`%\\`; flush privileges;"
-                        cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute=\"#{new_db}\""
-                        #ssh = system("ssh #{$defaults["kontena"]["platforms"]["geniem/production"]["database"]} '#{cmd}'")
-                        #system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}")
-                    end
+                        puts "Do you want to create database for production?"
+                        if is_yes(gets)
+                            system("kontena master use geniem-production")
+                            mysql_pass = `kontena vault read production-root-mysql-password | grep value`.strip.split(" ")[1]
+                            password = `openssl rand -hex 42`.strip
+                            new_db = "CREATE DATABASE IF NOT EXISTS `client-#{$globals["name"]}`; CREATE USER `client-#{$globals["name"]}`@`%` IDENTIFIED BY \"#{password}\"; grant all privileges on `client-#{$globals["name"]}`.* to `client-#{$globals["name"]}`@`%`; flush privileges;"
+                            cmd = "sudo mysql -uroot -p#{mysql_pass.strip} --execute='#{new_db}'"
+                            open("./db_script", 'w') { |f|
+                                f.puts(cmd)
+                            }
+                            ssh_cmd = "ssh #{$defaults["kontena"]["platforms"]["geniem/production"]["database"]} < db_script"
+                            ssh = system(ssh_cmd)
+                            File.delete("./db_script")
+                            system("kontena vault write client-#{$globals["name"]}-mysql-password #{password}") or system("kontena vault update client-#{$globals["name"]}-mysql-password #{password}") 
+                        end
 
-                    puts "Databases created."
+                        puts "Databases created."
+                    end
                 },
                 "initialize_gcp;Do you want to setup Google Cloud Platform? (yes/no)" => -> (yesno) {
                     if is_yes(yesno)
