@@ -175,6 +175,7 @@ $ gdev reload
 * [Otto Rautamaa](https://github.com/ironland), ubuntu fixes and development.
 * [Arttu Mäkipörhölä](https://github.com/godbone), ubuntu fixes and development.
 * [Miika Arponen](https://github.com/nomafin), docker sync fixes and development.
+* [Riku Järvinen](https://github.com/rikujarvinen), development.
 
 ## Contributing
 
