@@ -7,7 +7,7 @@ ANSIBLE_NEEDED="2.0"
 OSX_NEEDED="10.10.0"
 
 # This is fork from original
-REPO='devgeniem/gdev'
+REPO='traone/gdev'
 
 # Returns 1 if upgrade is needed
 # $1 - SYSTEM VERSION
